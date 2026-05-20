@@ -126,17 +126,5 @@ export default async function handler(req, res) {
     return res.status(200).json({ room });
   }
 
-  if (action === 'clear-result') {
-    if (!roomCode) return res.status(400).json({ error: 'Missing roomCode' });
-
-    const { error: updErr } = await supabase
-      .from('rooms')
-      .update({ last_result: null, next_round_at: null })
-      .eq('code', roomCode.toLowerCase());
-
-    if (updErr) return res.status(500).json({ error: updErr.message });
-    return res.status(200).json({ ok: true });
-  }
-
   return res.status(400).json({ error: 'Invalid action' });
 }

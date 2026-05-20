@@ -23,6 +23,7 @@ export default function Multiplayer() {
     let channel = null;
     let allEvents = [];
     const MIN_EVENTS = 25;
+    let lastShownResultRound = null;
     const translations = {}; // { [lang]: { [id]: { short_name, description } } }
     function getLang() { return sessionStorage.getItem('mp_lang') || 'en'; }
 
@@ -404,7 +405,9 @@ export default function Multiplayer() {
           if (newRoom.last_result) {
             showRoundResult(newRoom);
           } else {
-            hideRoundResult();
+            // Next round started (first player answered). Render new cards.
+            // Do NOT hide result overlay here — let the local 3.5s timer handle it
+            // so slow clients still see the result even if next round started early.
             renderRoom();
           }
         })
@@ -516,7 +519,12 @@ export default function Multiplayer() {
       const oppAns = lr.answered[oppId];
 
       if (!myAns || !oppAns) return;
-      if (!overlay.classList.contains('hidden')) return;
+
+      const resultRound = lr.round || 0;
+      if (resultRound <= lastShownResultRound) return; // already showed this result
+      if (!overlay.classList.contains('hidden')) return; // safety
+
+      lastShownResultRound = resultRound;
 
       const allEvents = [lr.earlier, lr.pair[0], lr.pair[1]].filter(Boolean);
       await ensureTranslated(allEvents);
@@ -567,12 +575,9 @@ export default function Multiplayer() {
 
       overlay.classList.remove('hidden');
 
+      // Hide locally after 3.5s — do NOT call API, avoids race conditions between clients
       setTimeout(() => {
-        fetch('/api/room', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'clear-result', roomCode: roomData.code }),
-        });
+        hideRoundResult();
       }, 3500);
     }
 

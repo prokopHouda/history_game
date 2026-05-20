@@ -587,7 +587,32 @@ export default function Multiplayer() {
         return;
       }
 
+      const isNonEnglish = getLang() !== 'en';
+      const cardA = document.getElementById('mp-cardA');
+      const cardB = document.getElementById('mp-cardB');
+
+      if (isNonEnglish) {
+        document.getElementById('mp-loadingA').style.display = 'block';
+        document.getElementById('mp-loadingB').style.display = 'block';
+        document.getElementById('mp-nameA').style.display = 'none';
+        document.getElementById('mp-descA').style.display = 'none';
+        document.getElementById('mp-nameB').style.display = 'none';
+        document.getElementById('mp-descB').style.display = 'none';
+        cardA.classList.add('disabled');
+        cardB.classList.add('disabled');
+        document.getElementById('mp-status').textContent = t('loading');
+      }
+
       await ensureTranslated(pair);
+
+      if (isNonEnglish) {
+        document.getElementById('mp-loadingA').style.display = 'none';
+        document.getElementById('mp-loadingB').style.display = 'none';
+        document.getElementById('mp-nameA').style.display = '';
+        document.getElementById('mp-descA').style.display = '';
+        document.getElementById('mp-nameB').style.display = '';
+        document.getElementById('mp-descB').style.display = '';
+      }
 
       const a = pair[0];
       const b = pair[1];
@@ -812,10 +837,12 @@ export default function Multiplayer() {
 
         <div className="cards">
           <div className="card" id="mp-cardA">
+            <div id="mp-loadingA" style={{ display: 'none', marginBottom: '0.5rem' }} ><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
             <h2 id="mp-nameA" />
             <p id="mp-descA" />
           </div>
           <div className="card" id="mp-cardB">
+            <div id="mp-loadingB" style={{ display: 'none', marginBottom: '0.5rem' }} ><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
             <h2 id="mp-nameB" />
             <p id="mp-descB" />
           </div>

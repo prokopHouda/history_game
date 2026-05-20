@@ -452,6 +452,16 @@ export default function Home() {
       document.getElementById('winOverlay').classList.add('hidden');
     }
 
+    function showLoader() {
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+      document.getElementById('loadingOverlay').style.opacity = '1';
+    }
+
+    function hideLoader() {
+      document.getElementById('loadingOverlay').classList.add('hidden');
+      document.getElementById('loadingOverlay').style.opacity = '0';
+    }
+
     function guess(side) {
       if (locked) return;
       locked = true;
@@ -496,8 +506,10 @@ export default function Home() {
     }
 
     async function nextRound() {
+      showLoader();
       const pair = pickPair();
       const final = await maybeTranslate(pair);
+      hideLoader();
       render(final);
       updateStreakBar();
     }
@@ -675,6 +687,11 @@ export default function Home() {
           <p className="win-subtitle" id="winSubtitle">You reached a streak of 50!</p>
           <button className="btn-primary" id="winBtn">Play Again</button>
         </div>
+      </div>
+
+      <div id="loadingOverlay" className="loading-overlay hidden">
+        <div className="spinner"></div>
+        <div className="spinner-text">Preparing next events…</div>
       </div>
 
       <div id="confetti-box"></div>

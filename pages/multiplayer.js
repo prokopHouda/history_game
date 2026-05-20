@@ -26,7 +26,201 @@ export default function Multiplayer() {
     const translations = {}; // { [lang]: { [id]: { short_name, description } } }
     function getLang() { return sessionStorage.getItem('mp_lang') || 'en'; }
 
+    const uiText = {
+      en: {
+        title: 'Multiplayer',
+        subtitle: 'Compete with a friend in real time',
+        createGame: 'Create Game',
+        joinGame: 'Join Game',
+        language: 'Language',
+        startYear: 'Start Year',
+        endYear: 'End Year',
+        region: 'Region',
+        country: 'Country',
+        rounds: 'Number of Rounds (5–50)',
+        createRoom: 'Create Room',
+        joinRoom: 'Join Room',
+        roomCode: 'Room Code',
+        loading: 'Loading...',
+        waiting: 'Waiting...',
+        waitingOpp: 'Waiting for opponent...',
+        yourTurn: 'Your turn! Pick the earlier event.',
+        loadingEvents: 'Loading events...',
+        you: 'You',
+        opponent: 'Opponent',
+        raceTitle: '🏁 Race to History Glory',
+        round: 'Round',
+        correct: 'Correct!',
+        wrong: 'Wrong!',
+        wasEarlier: 'was earlier',
+        oppLabel: 'Opponent:',
+        nextRound: 'Next round starting soon...',
+        youWon: '🏆 You Won!',
+        youLost: '😅 You Lost!',
+        tie: "🤝 It's a Tie!",
+        playAgain: 'Play Again',
+        winnerWin: [
+          'History bows before your greatness!',
+          'You are the true Chronomancer!',
+          'Time itself cannot defeat you!',
+          'The history books will remember this victory!',
+          'Absolutely legendary performance!',
+        ],
+        winnerLose: [
+          'Even Napoleon lost at Waterloo...',
+          'History is written by the victors — study harder!',
+          'Close, but no cigar! Try again?',
+          'The timeline has spoken. Better luck next time!',
+          'Don\'t worry, Einstein failed exams too!',
+        ],
+        winnerTie: [
+          'Great minds think alike!',
+          'A perfectly balanced duel of historians!',
+          'Split decision — rematch time!',
+          'You are equally matched in time!',
+        ],
+      },
+      cs: {
+        title: 'Multiplayer',
+        subtitle: 'Soutěž se svým přítelem v reálném čase',
+        createGame: 'Vytvořit hru',
+        joinGame: 'Připojit se ke hře',
+        language: 'Jazyk',
+        startYear: 'Od roku',
+        endYear: 'Do roku',
+        region: 'Region',
+        country: 'Země',
+        rounds: 'Počet kol (5–50)',
+        createRoom: 'Vytvořit místnost',
+        joinRoom: 'Připojit se',
+        roomCode: 'Kód místnosti',
+        loading: 'Načítání...',
+        waiting: 'Čekání...',
+        waitingOpp: 'Čeká se na soupeře...',
+        yourTurn: 'Jsi na tahu! Vyber dřívější událost.',
+        loadingEvents: 'Načítání událostí...',
+        you: 'Ty',
+        opponent: 'Soupeř',
+        raceTitle: '🏁 Závod ke slávě dějin',
+        round: 'Kolo',
+        correct: 'Správně!',
+        wrong: 'Špatně!',
+        wasEarlier: 'bylo dřív',
+        oppLabel: 'Soupeř:',
+        nextRound: 'Další kolo začíná za chvíli...',
+        youWon: '🏆 Vyhrál jsi!',
+        youLost: '😅 Prohrál jsi!',
+        tie: '🤝 Remíza!',
+        playAgain: 'Hrát znovu',
+        winnerWin: [
+          'Dějiny se klaní před tvou velikostí!',
+          'Jsi pravý Chronomancer!',
+          'Sám čas tě nemůže porazit!',
+          'Dějepisné knihy si tuto výhru zapamatují!',
+          'Absolutně legendární výkon!',
+        ],
+        winnerLose: [
+          'I Napoleon prohrál u Waterloo...',
+          'Dějiny píší vítězové — studuj více!',
+          'Blízko, ale žádný doutník! Zkus to znovu?',
+          'Časová osa rozhodla. Příště to vyjde!',
+          'Neboj se, i Einstein propadával zkouškami!',
+        ],
+        winnerTie: [
+          'Skvělé myšlenky se shodují!',
+          'Dokonale vyrovnaný souboj historiků!',
+          'Rozdílný verdikt — odveta!',
+          'Jste vyrovnaní v čase!',
+        ],
+      },
+      it: {
+        title: 'Multiplayer',
+        subtitle: 'Gareggia contro un amico in tempo reale',
+        createGame: 'Crea partita',
+        joinGame: 'Unisciti alla partita',
+        language: 'Lingua',
+        startYear: 'Anno inizio',
+        endYear: 'Anno fine',
+        region: 'Regione',
+        country: 'Paese',
+        rounds: 'Numero di round (5–50)',
+        createRoom: 'Crea stanza',
+        joinRoom: 'Unisciti',
+        roomCode: 'Codice stanza',
+        loading: 'Caricamento...',
+        waiting: 'In attesa...',
+        waitingOpp: 'In attesa dell\'avversario...',
+        yourTurn: 'Tocca a te! Scegli l\'evento più antico.',
+        loadingEvents: 'Caricamento eventi...',
+        you: 'Tu',
+        opponent: 'Avversario',
+        raceTitle: '🏁 Corsa alla gloria storica',
+        round: 'Round',
+        correct: 'Corretto!',
+        wrong: 'Sbagliato!',
+        wasEarlier: 'era prima',
+        oppLabel: 'Avversario:',
+        nextRound: 'Il prossimo round inizierà a breve...',
+        youWon: '🏆 Hai vinto!',
+        youLost: '😅 Hai perso!',
+        tie: '🤝 Pareggio!',
+        playAgain: 'Gioca ancora',
+        winnerWin: [
+          'La storia si inchina davanti alla tua grandezza!',
+          'Sei il vero Chronomancer!',
+          'Il tempo stesso non può sconfiggerti!',
+          'I libri di storia ricorderanno questa vittoria!',
+          'Prestazione assolutamente leggendaria!',
+        ],
+        winnerLose: [
+          'Anche Napoleone perse a Waterloo...',
+          'La storia è scritta dai vincitori — studia di più!',
+          'Ci sei andato vicino! Riprova?',
+          'La linea temporale ha parlato. Buona fortuna la prossima volta!',
+          'Non preoccuparti, anche Einstein bocciava gli esami!',
+        ],
+        winnerTie: [
+          'Le grandi menti la pensano allo stesso modo!',
+          'Un duello di storici perfettamente bilanciato!',
+          'Decisione in parità — rivincita!',
+          'Siete alla pari nel tempo!',
+        ],
+      },
+    };
+
+    function t(key) {
+      const l = getLang();
+      return uiText[l]?.[key] ?? uiText.en[key] ?? key;
+    }
+
+    function updateUIText() {
+      const l = getLang();
+      document.getElementById('mp-title').textContent = t('title');
+      document.getElementById('mp-subtitle').textContent = t('subtitle');
+      document.getElementById('mp-lobby-lang-label').textContent = t('language');
+      document.getElementById('mp-lobby-create-title').textContent = t('createGame');
+      document.getElementById('mp-lobby-startYear-label').textContent = t('startYear');
+      document.getElementById('mp-lobby-endYear-label').textContent = t('endYear');
+      document.getElementById('mp-lobby-region-label').textContent = t('region');
+      document.getElementById('mp-lobby-country-label').textContent = t('country');
+      document.getElementById('mp-lobby-rounds-label').textContent = t('rounds');
+      document.getElementById('btn-create').textContent = t('createRoom');
+      document.getElementById('mp-lobby-join-title').textContent = t('joinGame');
+      document.getElementById('mp-lobby-roomCode-label').textContent = t('roomCode');
+      document.getElementById('btn-join').textContent = t('joinRoom');
+      document.getElementById('mp-loading').textContent = t('loading');
+      document.getElementById('mp-waiting-msg').textContent = t('waiting');
+      document.getElementById('mp-game-you-label').textContent = t('you');
+      document.getElementById('mp-game-opp-label').textContent = t('opponent');
+      document.getElementById('mp-race-title').textContent = t('raceTitle');
+      document.getElementById('mp-race-me-label').textContent = t('you');
+      document.getElementById('mp-race-opp-label').textContent = t('opponent');
+      document.getElementById('mp-next-round').textContent = t('nextRound');
+      document.getElementById('btn-play-again').textContent = t('playAgain');
+    }
+
     async function initLobby() {
+      updateUIText();
       const { data } = await supabase.from('events').select('id, short_name, date, year, description, countries, region');
       if (data) {
         allEvents = data;
@@ -168,6 +362,7 @@ export default function Multiplayer() {
       if (!code) return;
       const lang = document.getElementById('mp-langSelect').value || 'en';
       sessionStorage.setItem('mp_lang', lang);
+      updateUIText();
 
       const res = await fetch('/api/room', {
         method: 'POST',
@@ -272,15 +467,17 @@ export default function Multiplayer() {
       const msgEl = document.getElementById('mp-winner-msg');
       const scoreEl = document.getElementById('mp-winner-scores');
 
+      const msgs = uiText[getLang()] || uiText.en;
+
       if (isMe) {
-        titleEl.textContent = '🏆 You Won!';
-        msgEl.textContent = winnerMessages.win[Math.floor(Math.random() * winnerMessages.win.length)];
+        titleEl.textContent = msgs.youWon;
+        msgEl.textContent = msgs.winnerWin[Math.floor(Math.random() * msgs.winnerWin.length)];
       } else if (w?.id === null) {
-        titleEl.textContent = '🤝 It\'s a Tie!';
-        msgEl.textContent = winnerMessages.tie[Math.floor(Math.random() * winnerMessages.tie.length)];
+        titleEl.textContent = msgs.tie;
+        msgEl.textContent = msgs.winnerTie[Math.floor(Math.random() * msgs.winnerTie.length)];
       } else {
-        titleEl.textContent = '😅 You Lost!';
-        msgEl.textContent = winnerMessages.lose[Math.floor(Math.random() * winnerMessages.lose.length)];
+        titleEl.textContent = msgs.youLost;
+        msgEl.textContent = msgs.winnerLose[Math.floor(Math.random() * msgs.winnerLose.length)];
       }
 
       scoreEl.textContent = `${myScore} — ${oppScore}`;
@@ -331,23 +528,23 @@ export default function Multiplayer() {
       const resultPairEl = document.getElementById('mp-result-pair');
 
       if (myAns.isCorrect) {
-        myResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ Correct! <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
-          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} was earlier</div>`;
+        myResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ ${t('correct')} <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
+          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
         myResultEl.style.borderColor = '#22c55e';
         myResultEl.style.background = 'rgba(34,197,94,0.1)';
       } else {
-        myResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.5rem; font-weight: 800;">❌ Wrong! <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
-          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} was earlier</div>`;
+        myResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.5rem; font-weight: 800;">❌ ${t('wrong')} <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
+          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
         myResultEl.style.borderColor = '#ef4444';
         myResultEl.style.background = 'rgba(239,68,68,0.1)';
       }
 
       if (oppAns.isCorrect) {
-        oppResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.2rem; font-weight: 700;">Opponent: ✅ +${oppAns.points}pts</div>`;
+        oppResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ✅ +${oppAns.points}pts</div>`;
         oppResultEl.style.borderColor = '#22c55e';
         oppResultEl.style.background = 'rgba(34,197,94,0.1)';
       } else {
-        oppResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.2rem; font-weight: 700;">Opponent: ❌ ${oppAns.points}pts</div>`;
+        oppResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ❌ ${oppAns.points}pts</div>`;
         oppResultEl.style.borderColor = '#ef4444';
         oppResultEl.style.background = 'rgba(239,68,68,0.1)';
       }
@@ -386,7 +583,7 @@ export default function Multiplayer() {
     async function renderRoom() {
       const pair = room.current_pair || [];
       if (pair.length < 2) {
-        document.getElementById('mp-status').textContent = 'Loading events...';
+        document.getElementById('mp-status').textContent = t('loadingEvents');
         return;
       }
 
@@ -415,17 +612,17 @@ export default function Multiplayer() {
 
       const round = room.current_round || 1;
       const total = room.total_rounds || 10;
-      document.getElementById('mp-round').textContent = `Round ${round} / ${total}`;
+      document.getElementById('mp-round').textContent = `${t('round')} ${round} / ${total}`;
 
       const ans = room.answered || {};
       const myAns = ans[playerId];
 
       if (myAns) {
-        document.getElementById('mp-status').textContent = 'Waiting for opponent...';
+        document.getElementById('mp-status').textContent = t('waitingOpp');
         document.getElementById('mp-cardA').classList.add('disabled');
         document.getElementById('mp-cardB').classList.add('disabled');
       } else {
-        document.getElementById('mp-status').textContent = 'Your turn! Pick the earlier event.';
+        document.getElementById('mp-status').textContent = t('yourTurn');
         document.getElementById('mp-cardA').classList.remove('disabled');
         document.getElementById('mp-cardB').classList.remove('disabled');
       }
@@ -461,7 +658,7 @@ export default function Multiplayer() {
       const ans = room.answered || {};
       if (ans[playerId]) return;
 
-      document.getElementById('mp-status').textContent = 'Submitting...';
+      document.getElementById('mp-status').textContent = 'Sending...';
       document.getElementById('mp-cardA').classList.add('disabled');
       document.getElementById('mp-cardB').classList.add('disabled');
 
@@ -473,14 +670,14 @@ export default function Multiplayer() {
         });
         if (!res.ok) {
           const err = await res.json();
-          document.getElementById('mp-status').textContent = 'Error: ' + (err.error || 'Unknown');
+          document.getElementById('mp-status').textContent = (err.error || 'Unknown');
           if (!ans[playerId]) {
             document.getElementById('mp-cardA').classList.remove('disabled');
             document.getElementById('mp-cardB').classList.remove('disabled');
           }
         }
       } catch (err) {
-        document.getElementById('mp-status').textContent = 'Network error. Try again.';
+        document.getElementById('mp-status').textContent = 'Network error.';
         document.getElementById('mp-cardA').classList.remove('disabled');
         document.getElementById('mp-cardB').classList.remove('disabled');
       }
@@ -491,6 +688,10 @@ export default function Multiplayer() {
     document.getElementById('mp-cardA')?.addEventListener('click', () => guess('A'));
     document.getElementById('mp-cardB')?.addEventListener('click', () => guess('B'));
     document.getElementById('btn-play-again')?.addEventListener('click', () => window.location.reload());
+    document.getElementById('mp-langSelect')?.addEventListener('change', () => {
+      sessionStorage.setItem('mp_lang', document.getElementById('mp-langSelect').value);
+      updateUIText();
+    });
 
     return () => {
       if (channel) supabase.removeChannel(channel);
@@ -499,15 +700,15 @@ export default function Multiplayer() {
 
   return (
     <div className="container">
-      <h1>Multiplayer</h1>
-      <p className="subtitle">Compete with a friend in real time</p>
+      <h1 id="mp-title">Multiplayer</h1>
+      <p className="subtitle" id="mp-subtitle">Compete with a friend in real time</p>
 
       <div id="mp-loading">Loading...</div>
 
       <div id="mp-lobby">
         {/* Language picker visible to everyone before joining */}
         <div className="field">
-          <label htmlFor="mp-langSelect">Language</label>
+          <label htmlFor="mp-langSelect" id="mp-lobby-lang-label">Language</label>
           <select id="mp-langSelect">
             <option value="en">English</option>
             <option value="cs">Čeština</option>
@@ -517,35 +718,35 @@ export default function Multiplayer() {
 
         <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '1.5rem 0' }} />
 
-        <h3 style={{ color: '#94a3b8', fontSize: '1rem', marginBottom: '1rem' }}>Create Game</h3>
+        <h3 id="mp-lobby-create-title" style={{ color: '#94a3b8', fontSize: '1rem', marginBottom: '1rem' }}>Create Game</h3>
 
         <div className="field-row">
           <div className="field">
-            <label htmlFor="mp-startYear">Start Year</label>
+            <label htmlFor="mp-startYear" id="mp-lobby-startYear-label">Start Year</label>
             <input type="number" id="mp-startYear" placeholder="e.g. 1500" />
           </div>
           <div className="field">
-            <label htmlFor="mp-endYear">End Year</label>
+            <label htmlFor="mp-endYear" id="mp-lobby-endYear-label">End Year</label>
             <input type="number" id="mp-endYear" placeholder="e.g. 2000" />
           </div>
         </div>
 
         <div className="field">
-          <label htmlFor="mp-regionFilter">Region</label>
+          <label htmlFor="mp-regionFilter" id="mp-lobby-region-label">Region</label>
           <select id="mp-regionFilter">
             <option value="">All regions</option>
           </select>
         </div>
 
         <div className="field">
-          <label htmlFor="mp-countryFilter">Country</label>
+          <label htmlFor="mp-countryFilter" id="mp-lobby-country-label">Country</label>
           <select id="mp-countryFilter">
             <option value="">All countries</option>
           </select>
         </div>
 
         <div className="field">
-          <label htmlFor="roundsInput">Number of Rounds (5–50)</label>
+          <label htmlFor="roundsInput" id="mp-lobby-rounds-label">Number of Rounds (5–50)</label>
           <input type="number" id="roundsInput" defaultValue={10} min={5} max={50} />
         </div>
 
@@ -555,10 +756,10 @@ export default function Multiplayer() {
         
         <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '1.5rem 0' }} />
         
-        <h3 style={{ color: '#94a3b8', fontSize: '1rem', marginBottom: '1rem' }}>Join Game</h3>
+        <h3 id="mp-lobby-join-title" style={{ color: '#94a3b8', fontSize: '1rem', marginBottom: '1rem' }}>Join Game</h3>
 
         <div className="field">
-          <label htmlFor="joinCode">Room Code</label>
+          <label htmlFor="joinCode" id="mp-lobby-roomCode-label">Room Code</label>
           <input type="text" id="joinCode" placeholder="abc" maxLength={3} />
           <button className="btn-secondary" id="btn-join">Join Room</button>
         </div>
@@ -572,10 +773,10 @@ export default function Multiplayer() {
       <div id="mp-game" className="hidden">
         <div className="hud">
           <div className="badge">
-            <span className="label">You</span> <span id="mp-my-score">0</span>
+            <span className="label" id="mp-game-you-label">You</span> <span id="mp-my-score">0</span>
           </div>
           <div className="badge">
-            <span className="label">Opponent</span> <span id="mp-opp-score">0</span>
+            <span className="label" id="mp-game-opp-label">Opponent</span> <span id="mp-opp-score">0</span>
           </div>
         </div>
 
@@ -586,18 +787,18 @@ export default function Multiplayer() {
           marginBottom: '1rem',
           border: '1px solid rgba(255,255,255,0.1)'
         }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div id="mp-race-title" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             🏁 Race to History Glory
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', minWidth: '3rem', color: '#6366f1' }}>You</span>
+              <span id="mp-race-me-label" style={{ fontSize: '0.85rem', minWidth: '3rem', color: '#6366f1' }}>You</span>
               <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: '999px', height: '12px', overflow: 'hidden' }}>
                 <div id="mp-race-me" style={{ width: '50%', height: '100%', borderRadius: '999px', transition: 'all 0.6s ease', background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.85rem', minWidth: '3rem', color: '#ef4444' }}>Opp</span>
+              <span id="mp-race-opp-label" style={{ fontSize: '0.85rem', minWidth: '3rem', color: '#ef4444' }}>Opp</span>
               <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: '999px', height: '12px', overflow: 'hidden' }}>
                 <div id="mp-race-opp" style={{ width: '50%', height: '100%', borderRadius: '999px', transition: 'all 0.6s ease', background: 'linear-gradient(90deg, #ef4444, #f87171)' }} />
               </div>
@@ -640,7 +841,7 @@ export default function Multiplayer() {
             textAlign: 'center'
           }} />
           
-          <div style={{ marginTop: '1.5rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+          <div id="mp-next-round" style={{ marginTop: '1.5rem', color: '#94a3b8', fontSize: '0.9rem' }}>
             Next round starting soon...
           </div>
           <div className="spinner" style={{ margin: '1rem auto', width: '32px', height: '32px' }} />

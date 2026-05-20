@@ -23,6 +23,8 @@ export default function Multiplayer() {
     let channel = null;
     let allEvents = [];
     const MIN_EVENTS = 25;
+    const translations = {}; // { [lang]: { [id]: { short_name, description } } }
+    function getLang() { return sessionStorage.getItem('mp_lang') || 'en'; }
 
     async function initLobby() {
       const { data } = await supabase.from('events').select('id, short_name, date, year, description, countries, region');
@@ -135,6 +137,9 @@ export default function Multiplayer() {
         return;
       }
 
+      const myLang = document.getElementById('mp-langSelect').value || 'en';
+      sessionStorage.setItem('mp_lang', myLang);
+
       const filters = {
         startYear: parseInt(document.getElementById('mp-startYear').value, 10) || null,
         endYear: parseInt(document.getElementById('mp-endYear').value, 10) || null,
@@ -145,7 +150,7 @@ export default function Multiplayer() {
       const res = await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', playerId, total_rounds: rounds, filters }),
+        body: JSON.stringify({ action: 'create', playerId, total_rounds: rounds, filters, lang: myLang }),
       });
       const json = await res.json();
       if (json.room) {
@@ -211,6 +216,36 @@ export default function Multiplayer() {
         .subscribe();
     }
 
+    async function ensureTranslated(events) {
+      const lang = getLang();
+      if (lang === 'en') return;
+      if (!translations[lang]) translations[lang] = {};
+      const cache = translations[lang];
+      const ids = events.filter((e) => e && !cache[e.id]).map((e) => e.id);
+      if (ids.length === 0) return;
+
+      try {
+        const res = await fetch(`/api/translate?ids=${ids.join(',')}&lang=${lang}`);
+        if (res.ok) {
+          const data = await res.json();
+          Object.entries(data).forEach(([id, t]) => {
+            cache[Number(id)] = t;
+          });
+        }
+      } catch (err) {
+        console.error('Translation fetch failed', err);
+      }
+    }
+
+    function getText(event) {
+      const lang = getLang();
+      const t = translations[lang]?.[event.id];
+      return {
+        short_name: t?.short_name || event.short_name || '???',
+        description: t?.description || event.description || '',
+      };
+    }
+
     function showLobby(msg) {
       document.getElementById('mp-lobby').classList.add('hidden');
       document.getElementById('mp-waiting').classList.remove('hidden');
@@ -274,7 +309,7 @@ export default function Multiplayer() {
       ],
     };
 
-    function showRoundResult(roomData) {
+    async function showRoundResult(roomData) {
       const lr = roomData.last_result;
       if (!lr || !lr.answered) return;
 
@@ -286,18 +321,23 @@ export default function Multiplayer() {
       if (!myAns || !oppAns) return;
       if (!overlay.classList.contains('hidden')) return;
 
+      const allEvents = [lr.earlier, lr.pair[0], lr.pair[1]].filter(Boolean);
+      await ensureTranslated(allEvents);
+
+      const earlierText = getText(lr.earlier);
+
       const myResultEl = document.getElementById('mp-my-result');
       const oppResultEl = document.getElementById('mp-opp-result');
       const resultPairEl = document.getElementById('mp-result-pair');
 
       if (myAns.isCorrect) {
         myResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ Correct! <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
-          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${lr.earlier.short_name} was earlier</div>`;
+          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} was earlier</div>`;
         myResultEl.style.borderColor = '#22c55e';
         myResultEl.style.background = 'rgba(34,197,94,0.1)';
       } else {
         myResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.5rem; font-weight: 800;">❌ Wrong! <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
-          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${lr.earlier.short_name} was earlier</div>`;
+          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} was earlier</div>`;
         myResultEl.style.borderColor = '#ef4444';
         myResultEl.style.background = 'rgba(239,68,68,0.1)';
       }
@@ -314,14 +354,16 @@ export default function Multiplayer() {
 
       const a = lr.pair[0];
       const b = lr.pair[1];
+      const ta = getText(a);
+      const tb = getText(b);
       resultPairEl.innerHTML = `<div style="display: flex; gap: 1rem; justify-content: center; align-items: center;">
         <div style="text-align: center;">
-          <div style="font-size: 1.1rem; font-weight: 700;">${a.short_name}</div>
+          <div style="font-size: 1.1rem; font-weight: 700;">${ta.short_name}</div>
           <div style="color: #94a3b8; font-size: 0.85rem;">${a.date || a.year}</div>
         </div>
         <div style="color: #94a3b8;">vs</div>
         <div style="text-align: center;">
-          <div style="font-size: 1.1rem; font-weight: 700;">${b.short_name}</div>
+          <div style="font-size: 1.1rem; font-weight: 700;">${tb.short_name}</div>
           <div style="color: #94a3b8; font-size: 0.85rem;">${b.date || b.year}</div>
         </div>
       </div>`;
@@ -341,21 +383,25 @@ export default function Multiplayer() {
       document.getElementById('mp-result-overlay').classList.add('hidden');
     }
 
-    function renderRoom() {
+    async function renderRoom() {
       const pair = room.current_pair || [];
       if (pair.length < 2) {
         document.getElementById('mp-status').textContent = 'Loading events...';
         return;
       }
 
+      await ensureTranslated(pair);
+
       const a = pair[0];
       const b = pair[1];
+      const ta = getText(a);
+      const tb = getText(b);
 
-      document.getElementById('mp-nameA').textContent = a.short_name || '???';
-      document.getElementById('mp-descA').textContent = a.description || '';
+      document.getElementById('mp-nameA').textContent = ta.short_name;
+      document.getElementById('mp-descA').textContent = ta.description;
 
-      document.getElementById('mp-nameB').textContent = b.short_name || '???';
-      document.getElementById('mp-descB').textContent = b.description || '';
+      document.getElementById('mp-nameB').textContent = tb.short_name;
+      document.getElementById('mp-descB').textContent = tb.description;
 
       const scores = room.scores || {};
       const oppId = room.host === playerId ? room.player_b : room.host;

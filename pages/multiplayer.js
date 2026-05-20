@@ -73,7 +73,6 @@ export default function Multiplayer() {
 
           if (newRoom.state === 'playing') {
             showGame();
-            renderRoom();
           }
 
           if (newRoom.state === 'finished') {
@@ -164,6 +163,7 @@ export default function Multiplayer() {
       const oppAns = lr.answered[oppId];
 
       if (!myAns || !oppAns) return;
+      if (!overlay.classList.contains('hidden')) return; // Already showing
 
       const myResultEl = document.getElementById('mp-my-result');
       const oppResultEl = document.getElementById('mp-opp-result');
@@ -209,6 +209,15 @@ export default function Multiplayer() {
       </div>`;
 
       overlay.classList.remove('hidden');
+
+      // Schedule clearing the result after 3.5s (only one client needs to do this, but both calling is harmless)
+      setTimeout(() => {
+        fetch('/api/room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'clear-result', roomCode: roomData.code }),
+        });
+      }, 3500);
     }
 
     function hideRoundResult() {

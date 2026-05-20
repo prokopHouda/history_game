@@ -587,6 +587,10 @@ export default function Home() {
     <div className="container">
       <h1>Which happened earlier?</h1>
       <p className="subtitle">Pick the older historical event</p>
+ 
+      <a href="/multiplayer" className="subtitle" style={{ display: 'block', marginBottom: '1rem', background: 'rgba(99,102,241,0.2)', padding: '0.5rem 1rem', borderRadius: '8px', textDecoration: 'none' }}>
+        🎮 Multiplayer Mode →
+      </a>
 
       <div id="loading">Loading events from Supabase…</div>
 

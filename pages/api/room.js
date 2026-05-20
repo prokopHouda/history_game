@@ -28,7 +28,7 @@ export default async function handler(req, res) {
 
   if (method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  const { action, roomCode, playerId } = req.body;
+  const { action, roomCode, playerId, total_rounds } = req.body;
 
   if (action === 'create') {
     let code = randomRoomCode();
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     while (!room && attempts < 10) {
       const { data, error } = await supabase
         .from('rooms')
-        .insert({ code, host: playerId, state: 'lobby' })
+        .insert({ code, host: playerId, state: 'lobby', total_rounds: total_rounds || 10 })
         .select()
         .single();
       if (data) room = data;

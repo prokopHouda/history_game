@@ -27,10 +27,26 @@ function pickPair(events) {
   return [events[i], events[j]];
 }
 
+function yearDiff(years) {
+  return Math.abs(years[0] - years[1]);
+}
+
+function calculatePoints(a, b, isCorrect) {
+  const yA = getEventYear(a);
+  const yB = getEventYear(b);
+  const diff = yearDiff([yA, yB]);
+
+  if (isCorrect) {
+    return diff >= 100 ? 1 : 2;  // Easy (100+ apart) = 1pt, Hard (<100) = 2pts
+  } else {
+    return diff >= 100 ? -2 : -1;  // Easy wrong = -2pts, Hard wrong = -1pt
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  const { roomId, playerId, choice } = req.body; // choice: 'A' | 'B'
+  const { roomId, playerId, choice } = req.body;
   if (!roomId || !playerId || !choice) return res.status(400).json({ error: 'Missing fields' });
 
   const { data: room, error } = await supabase
@@ -51,17 +67,13 @@ export default async function handler(req, res) {
   const chosen = choice === 'A' ? a : b;
   const isCorrect = chosen.id === earlierId;
 
+  const points = calculatePoints(a, b, isCorrect);
+
   const scores = { ...(room.scores || {}) };
-  const streaks = { ...(room.streaks || {}) };
   const answered = { ...(room.answered || {}) };
 
-  if (isCorrect) {
-    scores[playerId] = (scores[playerId] || 0) + 1;
-    streaks[playerId] = (streaks[playerId] || 0) + 1;
-  } else {
-    streaks[playerId] = 0;
-  }
-  answered[playerId] = { choice, isCorrect };
+  scores[playerId] = (scores[playerId] || 0) + points;
+  answered[playerId] = { choice, isCorrect, points };
 
   const hostId = room.host;
   const bId = room.player_b;
@@ -71,8 +83,9 @@ export default async function handler(req, res) {
   let nextPair = pair;
   let round = room.current_round || 0;
   let state = room.state;
-  let winner = room.winner;
+  let winner = null;
   let resets = {};
+  const totalRounds = room.total_rounds || 10;
 
   if (allAnswered) {
     round += 1;
@@ -82,19 +95,20 @@ export default async function handler(req, res) {
     }
     resets = { answered: {} };
 
-    // Check streak win (streak of 3 = win for simplicity in multiplayer)
-    const hostStreak = streaks[hostId] || 0;
-    const bStreak = streaks[bId] || 0;
-    if (hostStreak >= 3) winner = { id: hostId, badge: '🏆' };
-    if (bStreak >= 3) winner = { id: bId, badge: '🏆' };
-    if (winner) state = 'finished';
+    if (round > totalRounds) {
+      state = 'finished';
+      const hostScore = scores[hostId] || 0;
+      const bScore = scores[bId] || 0;
+      if (hostScore > bScore) winner = { id: hostId, score: hostScore, badge: '🏆' };
+      else if (bScore > hostScore) winner = { id: bId, score: bScore, badge: '🏆' };
+      else winner = { id: null, score: hostScore, badge: '🤝' }; // tie
+    }
   }
 
   const { error: updErr } = await supabase
     .from('rooms')
     .update({
       scores,
-      streaks,
       answered,
       current_pair: nextPair,
       current_round: round,
@@ -108,12 +122,13 @@ export default async function handler(req, res) {
 
   res.status(200).json({
     isCorrect,
+    points,
     earlier: getTime(a) < getTime(b) ? a : b,
     later: getTime(a) < getTime(b) ? b : a,
     scores,
-    streaks,
     allAnswered,
     round,
+    totalRounds,
     winner,
   });
 }

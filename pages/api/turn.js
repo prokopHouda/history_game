@@ -84,7 +84,6 @@ export default async function handler(req, res) {
   let round = room.current_round || 0;
   let state = room.state;
   let winner = null;
-  let resets = {};
   const totalRounds = room.total_rounds || 10;
 
   if (allAnswered) {
@@ -93,7 +92,6 @@ export default async function handler(req, res) {
     if (events.length >= 2) {
       nextPair = pickPair(events);
     }
-    resets = { answered: {} };
 
     if (round > totalRounds) {
       state = 'finished';
@@ -101,21 +99,26 @@ export default async function handler(req, res) {
       const bScore = scores[bId] || 0;
       if (hostScore > bScore) winner = { id: hostId, score: hostScore, badge: '🏆' };
       else if (bScore > hostScore) winner = { id: bId, score: bScore, badge: '🏆' };
-      else winner = { id: null, score: hostScore, badge: '🤝' }; // tie
+      else winner = { id: null, score: hostScore, badge: '🤝' };
     }
+  }
+
+  const updateData = {
+    scores,
+    current_pair: nextPair,
+    current_round: round,
+    state,
+    winner,
+  };
+  if (allAnswered) {
+    updateData.answered = {};
+  } else {
+    updateData.answered = answered;
   }
 
   const { error: updErr } = await supabase
     .from('rooms')
-    .update({
-      scores,
-      answered,
-      current_pair: nextPair,
-      current_round: round,
-      state,
-      winner,
-      ...resets,
-    })
+    .update(updateData)
     .eq('id', roomId);
 
   if (updErr) return res.status(500).json({ error: updErr.message });

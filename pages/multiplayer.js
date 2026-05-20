@@ -13,10 +13,10 @@ export default function Multiplayer() {
 
     document.getElementById('mp-loading').classList.add('hidden');
 
-    let playerId = localStorage.getItem('mp_player_id');
+    let playerId = sessionStorage.getItem('mp_player_id');
     if (!playerId) {
       playerId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem('mp_player_id', playerId);
+      sessionStorage.setItem('mp_player_id', playerId);
     }
 
     let room = null;
@@ -180,15 +180,19 @@ export default function Multiplayer() {
       const total = room.total_rounds || 10;
       document.getElementById('mp-round').textContent = `Round ${round} / ${total}`;
 
-      // Status
+      // Status and card lock
       const ans = room.answered || {};
       const myAns = ans[playerId];
 
-      document.getElementById('mp-status').textContent =
-        myAns ? 'Waiting for opponent...' : 'Your turn! Pick the earlier event.';
-
-      document.getElementById('mp-cardA').classList.toggle('disabled', !!myAns);
-      document.getElementById('mp-cardB').classList.toggle('disabled', !!myAns);
+      if (myAns) {
+        document.getElementById('mp-status').textContent = 'Waiting for opponent...';
+        document.getElementById('mp-cardA').classList.add('disabled');
+        document.getElementById('mp-cardB').classList.add('disabled');
+      } else {
+        document.getElementById('mp-status').textContent = 'Your turn! Pick the earlier event.';
+        document.getElementById('mp-cardA').classList.remove('disabled');
+        document.getElementById('mp-cardB').classList.remove('disabled');
+      }
     }
 
     async function guess(side) {
@@ -196,15 +200,29 @@ export default function Multiplayer() {
       const ans = room.answered || {};
       if (ans[playerId]) return;
 
-      document.getElementById('mp-status').textContent = 'Waiting for opponent...';
+      document.getElementById('mp-status').textContent = 'Submitting...';
       document.getElementById('mp-cardA').classList.add('disabled');
       document.getElementById('mp-cardB').classList.add('disabled');
 
-      await fetch('/api/turn', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: room.id, playerId, choice: side }),
-      });
+      try {
+        const res = await fetch('/api/turn', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId: room.id, playerId, choice: side }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          document.getElementById('mp-status').textContent = 'Error: ' + (err.error || 'Unknown');
+          if (!ans[playerId]) {
+            document.getElementById('mp-cardA').classList.remove('disabled');
+            document.getElementById('mp-cardB').classList.remove('disabled');
+          }
+        }
+      } catch (err) {
+        document.getElementById('mp-status').textContent = 'Network error. Try again.';
+        document.getElementById('mp-cardA').classList.remove('disabled');
+        document.getElementById('mp-cardB').classList.remove('disabled');
+      }
     }
 
     document.getElementById('btn-create')?.addEventListener('click', createRoom);

@@ -7,14 +7,27 @@
 - **Local source folder**: `C:\Users\proko\history-game` (NOT `Documents\history_game`)
 
 ## Entry points & architecture
-- **App entry**: `pages/index.js` — quiz game UI, filters, scoring, streaks, i18n, translations
+- **App entry (single player)**: `pages/index.js` — quiz game UI, filters, scoring, streaks, i18n, translations
+- **App entry (multiplayer)**: `pages/multiplayer.js` — lobby, game rooms, turn-based play via Supabase Realtime
 - **API entry**: `pages/api/translate.js` — fetches cached translations from Supabase; falls back to DeepL; stores new translations back to `event_translations`
+- **New API endpoints**: `pages/api/room.js` (create/join), `pages/api/turn.js` (validate turn + generate next pair)
 - **App shell**: standard `_app.js`, `_document.js`
 - **Styling**: CSS Modules (`Home.module.css`) + `globals.css` with glassmorphism / gradient theme (Inter font via Google Fonts)
+
+### Multiplayer architecture (Supabase Realtime)
+- Players create/join rooms via `POST /api/room` (3-letter room code)
+- Room state stored in `rooms` table with realtime enabled via `postgres_changes`
+- Client subscribes to `supabase.channel("room:{code}")` for instant sync
+- Both players answer individually; when both answered, system auto-generates next pair via `pickPair` (reusing existing event logic)
+- Win condition: streak of 3 (simplified multiplayer version)
+- Realtime WebSocket used instead of polling; free tier supports 200 concurrent connections
 
 ## Data model (Supabase)
 - **`events` table**: `id, short_name, date, year, description, countries, region`
 - **`event_translations` table**: `event_id, lang, short_name, description` — populated lazily via `/api/translate`
+- **`rooms` table** (multiplayer): `id, code, host, player_b, state, events, current_pair, scores, streaks, current_round, answered, winner, created_at/updated_at`
+  - Migration: `database/00_create_rooms.sql` — must be run manually in Supabase SQL Editor
+  - Realtime enabled via: `alter publication supabase_realtime add table rooms;`
 - Game requires at least 25 matching events to start
 
 ## Environment variables

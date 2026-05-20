@@ -71,6 +71,8 @@ export default async function handler(req, res) {
       streaks: { [existing.host]: 0, [playerId]: 0 },
       answered: {},
       current_round: 1,
+      last_result: null,
+      next_round_at: null,
     };
 
     const { data: room, error } = await supabase

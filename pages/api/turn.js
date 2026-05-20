@@ -37,9 +37,9 @@ function calculatePoints(a, b, isCorrect) {
   const diff = yearDiff([yA, yB]);
 
   if (isCorrect) {
-    return diff >= 100 ? 1 : 2;  // Easy (100+ apart) = 1pt, Hard (<100) = 2pts
+    return diff >= 100 ? 1 : 2;
   } else {
-    return diff >= 100 ? -2 : -1;  // Easy wrong = -2pts, Hard wrong = -1pt
+    return diff >= 100 ? -2 : -1;
   }
 }
 
@@ -86,12 +86,26 @@ export default async function handler(req, res) {
   let winner = null;
   const totalRounds = room.total_rounds || 10;
 
+  let lastResult = null;
+  let nextRoundAt = null;
+
   if (allAnswered) {
     round += 1;
     const events = room.events || [];
     if (events.length >= 2) {
       nextPair = pickPair(events);
     }
+
+    // Build result summary for the round that just ended
+    const earlier = getTime(a) < getTime(b) ? a : b;
+    lastResult = {
+      pair: [a, b],
+      earlier,
+      answered: { ...answered },
+      scores: { ...scores },
+      round,
+    };
+    nextRoundAt = new Date(Date.now() + 3500).toISOString();
 
     if (round > totalRounds) {
       state = 'finished';
@@ -109,6 +123,8 @@ export default async function handler(req, res) {
     current_round: round,
     state,
     winner,
+    last_result: lastResult,
+    next_round_at: nextRoundAt,
   };
   if (allAnswered) {
     updateData.answered = {};

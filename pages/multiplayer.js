@@ -78,9 +78,13 @@ export default function Multiplayer() {
 
           if (newRoom.state === 'finished') {
             showWinner(newRoom);
+            return;
           }
 
-          if (newRoom.current_pair?.length === 2) {
+          if (newRoom.last_result) {
+            showRoundResult(newRoom);
+          } else {
+            hideRoundResult();
             renderRoom();
           }
         })
@@ -150,6 +154,67 @@ export default function Multiplayer() {
       ],
     };
 
+    function showRoundResult(roomData) {
+      const lr = roomData.last_result;
+      if (!lr || !lr.answered) return;
+
+      const overlay = document.getElementById('mp-result-overlay');
+      const myAns = lr.answered[playerId];
+      const oppId = roomData.host === playerId ? roomData.player_b : roomData.host;
+      const oppAns = lr.answered[oppId];
+
+      if (!myAns || !oppAns) return;
+
+      const myResultEl = document.getElementById('mp-my-result');
+      const oppResultEl = document.getElementById('mp-opp-result');
+      const resultPairEl = document.getElementById('mp-result-pair');
+
+      // My result
+      if (myAns.isCorrect) {
+        myResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ Correct! <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
+          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${lr.earlier.short_name} was earlier</div>`;
+        myResultEl.style.borderColor = '#22c55e';
+        myResultEl.style.background = 'rgba(34,197,94,0.1)';
+      } else {
+        myResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.5rem; font-weight: 800;">❌ Wrong! <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
+          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${lr.earlier.short_name} was earlier</div>`;
+        myResultEl.style.borderColor = '#ef4444';
+        myResultEl.style.background = 'rgba(239,68,68,0.1)';
+      }
+
+      // Opponent result
+      if (oppAns.isCorrect) {
+        oppResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.2rem; font-weight: 700;">Opponent: ✅ +${oppAns.points}pts</div>`;
+        oppResultEl.style.borderColor = '#22c55e';
+        oppResultEl.style.background = 'rgba(34,197,94,0.1)';
+      } else {
+        oppResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.2rem; font-weight: 700;">Opponent: ❌ ${oppAns.points}pts</div>`;
+        oppResultEl.style.borderColor = '#ef4444';
+        oppResultEl.style.background = 'rgba(239,68,68,0.1)';
+      }
+
+      // Show pair dates
+      const a = lr.pair[0];
+      const b = lr.pair[1];
+      resultPairEl.innerHTML = `<div style="display: flex; gap: 1rem; justify-content: center; align-items: center;">
+        <div style="text-align: center;">
+          <div style="font-size: 1.1rem; font-weight: 700;">${a.short_name}</div>
+          <div style="color: #94a3b8; font-size: 0.85rem;">${a.date || a.year}</div>
+        </div>
+        <div style="color: #94a3b8;">vs</div>
+        <div style="text-align: center;">
+          <div style="font-size: 1.1rem; font-weight: 700;">${b.short_name}</div>
+          <div style="color: #94a3b8; font-size: 0.85rem;">${b.date || b.year}</div>
+        </div>
+      </div>`;
+
+      overlay.classList.remove('hidden');
+    }
+
+    function hideRoundResult() {
+      document.getElementById('mp-result-overlay').classList.add('hidden');
+    }
+
     function renderRoom() {
       const pair = room.current_pair || [];
       if (pair.length < 2) {
@@ -175,6 +240,9 @@ export default function Multiplayer() {
       document.getElementById('mp-my-score').textContent = myScore;
       document.getElementById('mp-opp-score').textContent = oppScore;
 
+      // Race tracker
+      updateRaceTracker(myScore, oppScore);
+
       // Round counter
       const round = room.current_round || 1;
       const total = room.total_rounds || 10;
@@ -192,6 +260,33 @@ export default function Multiplayer() {
         document.getElementById('mp-status').textContent = 'Your turn! Pick the earlier event.';
         document.getElementById('mp-cardA').classList.remove('disabled');
         document.getElementById('mp-cardB').classList.remove('disabled');
+      }
+    }
+
+    function updateRaceTracker(myScore, oppScore) {
+      const total = (Math.abs(myScore) + Math.abs(oppScore)) || 1;
+      const myPct = Math.max(5, Math.min(95, ((myScore + 20) / 40) * 100));
+      const oppPct = Math.max(5, Math.min(95, ((oppScore + 20) / 40) * 100));
+      
+      const track = document.getElementById('mp-race-track');
+      const myBar = document.getElementById('mp-race-me');
+      const oppBar = document.getElementById('mp-race-opp');
+      
+      if (track && myBar && oppBar) {
+        myBar.style.width = myPct + '%';
+        oppBar.style.width = oppPct + '%';
+        
+        // Color based on who's winning
+        if (myScore > oppScore) {
+          myBar.style.background = 'linear-gradient(90deg, #22c55e, #34d399)';
+          oppBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+        } else if (oppScore > myScore) {
+          myBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+          oppBar.style.background = 'linear-gradient(90deg, #22c55e, #34d399)';
+        } else {
+          myBar.style.background = 'linear-gradient(90deg, #fbbf24, #f59e0b)';
+          oppBar.style.background = 'linear-gradient(90deg, #fbbf24, #f59e0b)';
+        }
       }
     }
 
@@ -274,6 +369,33 @@ export default function Multiplayer() {
           </div>
         </div>
 
+        <!-- Race Tracker -->
+        <div id="mp-race-track" style={{ 
+          background: 'rgba(0,0,0,0.3)', 
+          borderRadius: '12px', 
+          padding: '0.75rem', 
+          marginBottom: '1rem',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            🏁 Race to History Glory
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', minWidth: '3rem', color: '#6366f1' }}>You</span>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: '999px', height: '12px', overflow: 'hidden' }}>
+                <div id="mp-race-me" style={{ width: '50%', height: '100%', borderRadius: '999px', transition: 'all 0.6s ease', background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', minWidth: '3rem', color: '#ef4444' }}>Opp</span>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: '999px', height: '12px', overflow: 'hidden' }}>
+                <div id="mp-race-opp" style={{ width: '50%', height: '100%', borderRadius: '999px', transition: 'all 0.6s ease', background: 'linear-gradient(90deg, #ef4444, #f87171)' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div id="mp-round" style={{ textAlign: 'center', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }} />
 
         <div id="mp-status" style={{ marginBottom: '1rem', fontWeight: 700, textAlign: 'center' }} />
@@ -287,6 +409,33 @@ export default function Multiplayer() {
             <h2 id="mp-nameB" />
             <p id="mp-descB" />
           </div>
+        </div>
+      </div>
+
+      <!-- Round Result Overlay -->
+      <div id="mp-result-overlay" className="win-overlay hidden">
+        <div className="win-content" style={{ maxWidth: '480px' }}>
+          <div id="mp-result-pair" style={{ marginBottom: '1.5rem' }} />
+          
+          <div id="mp-my-result" style={{ 
+            padding: '1rem', 
+            borderRadius: '12px', 
+            border: '2px solid', 
+            marginBottom: '0.75rem',
+            textAlign: 'center'
+          }} />
+          
+          <div id="mp-opp-result" style={{ 
+            padding: '0.75rem', 
+            borderRadius: '12px', 
+            border: '2px solid',
+            textAlign: 'center'
+          }} />
+          
+          <div style={{ marginTop: '1.5rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+            Next round starting soon...
+          </div>
+          <div className="spinner" style={{ margin: '1rem auto', width: '32px', height: '32px' }} />
         </div>
       </div>
 

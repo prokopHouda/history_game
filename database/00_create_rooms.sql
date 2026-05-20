@@ -1,6 +1,3 @@
--- Enable Realtime on rooms table
-alter publication supabase_realtime add table rooms;
-
 -- Create rooms table
 create table rooms (
   id uuid default gen_random_uuid() primary key,
@@ -21,3 +18,7 @@ create table rooms (
 
 -- Index for fast room code lookup
 create index rooms_code_idx on rooms(code);
+
+-- Enable Realtime on rooms table (must be done AFTER table exists)
+alter publication supabase_realtime add table rooms;
+

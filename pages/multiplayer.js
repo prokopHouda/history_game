@@ -11,6 +11,9 @@ export default function Multiplayer() {
     }
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // Hide initial loading immediately — page is ready
+    document.getElementById('mp-loading').classList.add('hidden');
+
     let playerId = localStorage.getItem('mp_player_id');
     if (!playerId) {
       playerId = Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -55,8 +58,10 @@ export default function Multiplayer() {
       if (json.room) {
         room = json.room;
         showGame();
+        renderRoom(); // Render immediately with initial pair
         subscribeToRoom(room.code);
       } else {
+        document.getElementById('mp-loading').classList.remove('hidden');
         document.getElementById('mp-loading').textContent = json.error || 'Failed to join room';
       }
     }
@@ -110,16 +115,19 @@ export default function Multiplayer() {
 
     function renderRoom() {
       const pair = room.current_pair || [];
-      if (pair.length < 2) return;
+      if (pair.length < 2) {
+        document.getElementById('mp-status').textContent = 'Loading events...';
+        return;
+      }
 
       const a = pair[0];
       const b = pair[1];
 
-      document.getElementById('mp-nameA').textContent = a.short_name;
-      document.getElementById('mp-descA').textContent = a.description;
+      document.getElementById('mp-nameA').textContent = a.short_name || '???';
+      document.getElementById('mp-descA').textContent = a.description || '';
 
-      document.getElementById('mp-nameB').textContent = b.short_name;
-      document.getElementById('mp-descB').textContent = b.description;
+      document.getElementById('mp-nameB').textContent = b.short_name || '???';
+      document.getElementById('mp-descB').textContent = b.description || '';
 
       const scores = room.scores || {};
       const streaks = room.streaks || {};

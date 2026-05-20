@@ -39,7 +39,7 @@ function calculatePoints(a, b, isCorrect) {
   if (isCorrect) {
     return diff >= 100 ? 1 : 2;
   } else {
-    return diff >= 100 ? -2 : -1;
+    return diff >= 100 ? -1 : 0;
   }
 }
 

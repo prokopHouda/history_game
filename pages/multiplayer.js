@@ -21,13 +21,131 @@ export default function Multiplayer() {
 
     let room = null;
     let channel = null;
+    let allEvents = [];
+    const MIN_EVENTS = 25;
+
+    async function initLobby() {
+      const { data } = await supabase.from('events').select('id, short_name, date, year, description, countries, region');
+      if (data) {
+        allEvents = data;
+        populateFilters(data);
+        updatePoolCounter();
+      }
+    }
+    initLobby();
+
+    function getEventYear(e) {
+      if (e.date) return parseInt(e.date.split('-')[0], 10);
+      return e.year ?? 0;
+    }
+
+    function countMatchingEvents() {
+      const startYear = parseInt(document.getElementById('mp-startYear').value, 10) || null;
+      const endYear = parseInt(document.getElementById('mp-endYear').value, 10) || null;
+      const region = document.getElementById('mp-regionFilter').value;
+      const country = document.getElementById('mp-countryFilter').value;
+
+      if (startYear !== null && endYear !== null && startYear > endYear) {
+        return { count: 0, valid: false };
+      }
+
+      const count = allEvents.filter((e) => {
+        const y = getEventYear(e);
+        if (startYear !== null && y < startYear) return false;
+        if (endYear !== null && y > endYear) return false;
+        if (region && e.region !== region) return false;
+        if (country) {
+          const list = (e.countries || '').split(',').map((c) => c.trim()).filter(Boolean);
+          if (!list.includes(country)) return false;
+        }
+        return true;
+      }).length;
+
+      return { count, valid: count >= MIN_EVENTS };
+    }
+
+    function updatePoolCounter() {
+      const { count, valid } = countMatchingEvents();
+      const counterEl = document.getElementById('mp-poolCounter');
+      const startBtn = document.getElementById('btn-create');
+
+      if (valid) {
+        counterEl.textContent = `${count} events available ✅`;
+        counterEl.style.color = '#34d399';
+        startBtn.disabled = false;
+        startBtn.style.opacity = '1';
+        startBtn.style.cursor = 'pointer';
+      } else {
+        counterEl.textContent = `Need at least ${MIN_EVENTS} events to play (${count}) ❌`;
+        counterEl.style.color = '#f87171';
+        startBtn.disabled = true;
+        startBtn.style.opacity = '0.5';
+        startBtn.style.cursor = 'not-allowed';
+      }
+    }
+
+    function populateFilters(data) {
+      const regions = [...new Set(data.map((e) => e.region).filter(Boolean))].sort();
+      const regionSel = document.getElementById('mp-regionFilter');
+      regionSel.innerHTML = '<option value="">All regions</option>';
+      regions.forEach((r) => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        regionSel.appendChild(opt);
+      });
+
+      const countrySet = new Set();
+      data.forEach((e) => {
+        if (e.countries) {
+          e.countries.split(',').forEach((c) => {
+            const code = c.trim();
+            if (code) countrySet.add(code);
+          });
+        }
+      });
+      const countries = [...countrySet].sort();
+      const countrySel = document.getElementById('mp-countryFilter');
+      countrySel.innerHTML = '<option value="">All countries</option>';
+      countries.forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        countrySel.appendChild(opt);
+      });
+
+      ['mp-startYear', 'mp-endYear', 'mp-regionFilter', 'mp-countryFilter'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('input', updatePoolCounter);
+        document.getElementById(id)?.addEventListener('change', updatePoolCounter);
+      });
+    }
 
     async function createRoom() {
       const rounds = parseInt(document.getElementById('roundsInput').value, 10) || 10;
+      if (rounds < 5 || rounds > 50) {
+        document.getElementById('mp-poolCounter').textContent = 'Rounds must be 5–50 ❌';
+        document.getElementById('mp-poolCounter').style.color = '#f87171';
+        return;
+      }
+
+      const { count, valid } = countMatchingEvents();
+      if (!valid) {
+        document.getElementById('mp-poolCounter').textContent = `Need at least ${MIN_EVENTS} events (${count}) ❌`;
+        document.getElementById('mp-poolCounter').style.color = '#f87171';
+        return;
+      }
+
+      const filters = {
+        startYear: parseInt(document.getElementById('mp-startYear').value, 10) || null,
+        endYear: parseInt(document.getElementById('mp-endYear').value, 10) || null,
+        region: document.getElementById('mp-regionFilter').value,
+        country: document.getElementById('mp-countryFilter').value,
+      };
+
       const res = await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', playerId, total_rounds: rounds }),
+        body: JSON.stringify({ action: 'create', playerId, total_rounds: rounds, filters }),
       });
       const json = await res.json();
       if (json.room) {
@@ -36,17 +154,20 @@ export default function Multiplayer() {
         subscribeToRoom(room.code);
       } else {
         document.getElementById('mp-loading').classList.remove('hidden');
-        document.getElementById('mp-loading').textContent = 'Failed to create room';
+        document.getElementById('mp-loading').textContent = json.error || 'Failed to create room';
       }
     }
 
     async function joinRoom() {
       const code = document.getElementById('joinCode').value.trim().toLowerCase();
       if (!code) return;
+      const lang = document.getElementById('mp-langSelect').value || 'en';
+      sessionStorage.setItem('mp_lang', lang);
+
       const res = await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'join', roomCode: code, playerId }),
+        body: JSON.stringify({ action: 'join', roomCode: code, playerId, lang }),
       });
       const json = await res.json();
       if (json.room) {
@@ -163,13 +284,12 @@ export default function Multiplayer() {
       const oppAns = lr.answered[oppId];
 
       if (!myAns || !oppAns) return;
-      if (!overlay.classList.contains('hidden')) return; // Already showing
+      if (!overlay.classList.contains('hidden')) return;
 
       const myResultEl = document.getElementById('mp-my-result');
       const oppResultEl = document.getElementById('mp-opp-result');
       const resultPairEl = document.getElementById('mp-result-pair');
 
-      // My result
       if (myAns.isCorrect) {
         myResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ Correct! <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
           <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${lr.earlier.short_name} was earlier</div>`;
@@ -182,7 +302,6 @@ export default function Multiplayer() {
         myResultEl.style.background = 'rgba(239,68,68,0.1)';
       }
 
-      // Opponent result
       if (oppAns.isCorrect) {
         oppResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.2rem; font-weight: 700;">Opponent: ✅ +${oppAns.points}pts</div>`;
         oppResultEl.style.borderColor = '#22c55e';
@@ -193,7 +312,6 @@ export default function Multiplayer() {
         oppResultEl.style.background = 'rgba(239,68,68,0.1)';
       }
 
-      // Show pair dates
       const a = lr.pair[0];
       const b = lr.pair[1];
       resultPairEl.innerHTML = `<div style="display: flex; gap: 1rem; justify-content: center; align-items: center;">
@@ -210,7 +328,6 @@ export default function Multiplayer() {
 
       overlay.classList.remove('hidden');
 
-      // Schedule clearing the result after 3.5s (only one client needs to do this, but both calling is harmless)
       setTimeout(() => {
         fetch('/api/room', {
           method: 'POST',
@@ -240,7 +357,6 @@ export default function Multiplayer() {
       document.getElementById('mp-nameB').textContent = b.short_name || '???';
       document.getElementById('mp-descB').textContent = b.description || '';
 
-      // Scores
       const scores = room.scores || {};
       const oppId = room.host === playerId ? room.player_b : room.host;
       const myScore = scores[playerId] || 0;
@@ -249,15 +365,12 @@ export default function Multiplayer() {
       document.getElementById('mp-my-score').textContent = myScore;
       document.getElementById('mp-opp-score').textContent = oppScore;
 
-      // Race tracker
       updateRaceTracker(myScore, oppScore);
 
-      // Round counter
       const round = room.current_round || 1;
       const total = room.total_rounds || 10;
       document.getElementById('mp-round').textContent = `Round ${round} / ${total}`;
 
-      // Status and card lock
       const ans = room.answered || {};
       const myAns = ans[playerId];
 
@@ -273,7 +386,6 @@ export default function Multiplayer() {
     }
 
     function updateRaceTracker(myScore, oppScore) {
-      const total = (Math.abs(myScore) + Math.abs(oppScore)) || 1;
       const myPct = Math.max(5, Math.min(95, ((myScore + 20) / 40) * 100));
       const oppPct = Math.max(5, Math.min(95, ((oppScore + 20) / 40) * 100));
       
@@ -285,7 +397,6 @@ export default function Multiplayer() {
         myBar.style.width = myPct + '%';
         oppBar.style.width = oppPct + '%';
         
-        // Color based on who's winning
         if (myScore > oppScore) {
           myBar.style.background = 'linear-gradient(90deg, #22c55e, #34d399)';
           oppBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
@@ -348,14 +459,58 @@ export default function Multiplayer() {
       <div id="mp-loading">Loading...</div>
 
       <div id="mp-lobby">
+        {/* Language picker visible to everyone before joining */}
         <div className="field">
-          <label htmlFor="roundsInput">Number of Rounds</label>
-          <input type="number" id="roundsInput" defaultValue={10} min={3} max={50} />
+          <label htmlFor="mp-langSelect">Language</label>
+          <select id="mp-langSelect">
+            <option value="en">English</option>
+            <option value="cs">Čeština</option>
+            <option value="it">Italiano</option>
+          </select>
         </div>
+
+        <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '1.5rem 0' }} />
+
+        <h3 style={{ color: '#94a3b8', fontSize: '1rem', marginBottom: '1rem' }}>Create Game</h3>
+
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="mp-startYear">Start Year</label>
+            <input type="number" id="mp-startYear" placeholder="e.g. 1500" />
+          </div>
+          <div className="field">
+            <label htmlFor="mp-endYear">End Year</label>
+            <input type="number" id="mp-endYear" placeholder="e.g. 2000" />
+          </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="mp-regionFilter">Region</label>
+          <select id="mp-regionFilter">
+            <option value="">All regions</option>
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="mp-countryFilter">Country</label>
+          <select id="mp-countryFilter">
+            <option value="">All countries</option>
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="roundsInput">Number of Rounds (5–50)</label>
+          <input type="number" id="roundsInput" defaultValue={10} min={5} max={50} />
+        </div>
+
+        <div id="mp-poolCounter" className="pool-counter">Checking pool…</div>
+
         <button className="btn-primary" id="btn-create">Create Room</button>
         
         <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '1.5rem 0' }} />
         
+        <h3 style={{ color: '#94a3b8', fontSize: '1rem', marginBottom: '1rem' }}>Join Game</h3>
+
         <div className="field">
           <label htmlFor="joinCode">Room Code</label>
           <input type="text" id="joinCode" placeholder="abc" maxLength={3} />
@@ -378,7 +533,6 @@ export default function Multiplayer() {
           </div>
         </div>
 
-        {/* Race Tracker */}
         <div id="mp-race-track" style={{ 
           background: 'rgba(0,0,0,0.3)', 
           borderRadius: '12px', 
@@ -421,7 +575,6 @@ export default function Multiplayer() {
         </div>
       </div>
 
-        {/* Round Result Overlay */}
       <div id="mp-result-overlay" className="win-overlay hidden">
         <div className="win-content" style={{ maxWidth: '480px' }}>
           <div id="mp-result-pair" style={{ marginBottom: '1.5rem' }} />

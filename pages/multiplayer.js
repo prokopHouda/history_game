@@ -402,13 +402,12 @@ export default function Multiplayer() {
             return;
           }
 
+          // Always render current game state first so new round cards are ready underneath
+          renderRoom();
+
+          // Show result overlay if there's a result for a round we haven't seen yet
           if (newRoom.last_result) {
             showRoundResult(newRoom);
-          } else {
-            // Next round started (first player answered). Render new cards.
-            // Do NOT hide result overlay here — let the local 3.5s timer handle it
-            // so slow clients still see the result even if next round started early.
-            renderRoom();
           }
         })
         .subscribe();

@@ -369,7 +369,7 @@ export default function Multiplayer() {
           </div>
         </div>
 
-        <!-- Race Tracker -->
+        {/* Race Tracker */}
         <div id="mp-race-track" style={{ 
           background: 'rgba(0,0,0,0.3)', 
           borderRadius: '12px', 
@@ -412,7 +412,7 @@ export default function Multiplayer() {
         </div>
       </div>
 
-      <!-- Round Result Overlay -->
+        {/* Round Result Overlay */}
       <div id="mp-result-overlay" className="win-overlay hidden">
         <div className="win-content" style={{ maxWidth: '480px' }}>
           <div id="mp-result-pair" style={{ marginBottom: '1.5rem' }} />

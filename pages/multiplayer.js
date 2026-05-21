@@ -24,6 +24,8 @@ export default function Multiplayer() {
     let allEvents = [];
     const MIN_EVENTS = 25;
     let lastShownResultRound = null;
+    let pendingRaceScores = null;
+    let suppressRaceTracker = false;
     const translations = {}; // { [lang]: { [id]: { short_name, description } } }
     function getLang() { return sessionStorage.getItem('mp_lang') || 'en'; }
 
@@ -408,6 +410,7 @@ export default function Multiplayer() {
           // Show result overlay if there's a result for a round we haven't seen yet
           if (newRoom.last_result) {
             showRoundResult(newRoom);
+            suppressRaceTracker = true;
           }
         })
         .subscribe();
@@ -582,6 +585,11 @@ export default function Multiplayer() {
 
     function hideRoundResult() {
       document.getElementById('mp-result-overlay').classList.add('hidden');
+      if (pendingRaceScores) {
+        updateRaceTracker(pendingRaceScores[0], pendingRaceScores[1]);
+        pendingRaceScores = null;
+      }
+      suppressRaceTracker = false;
     }
 
     async function renderRoom() {
@@ -637,7 +645,11 @@ export default function Multiplayer() {
       document.getElementById('mp-my-score').textContent = myScore;
       document.getElementById('mp-opp-score').textContent = oppScore;
 
-      updateRaceTracker(myScore, oppScore);
+      if (suppressRaceTracker) {
+        pendingRaceScores = [myScore, oppScore];
+      } else {
+        updateRaceTracker(myScore, oppScore);
+      }
 
       const round = room.current_round || 1;
       const total = room.total_rounds || 10;

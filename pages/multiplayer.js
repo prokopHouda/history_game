@@ -59,6 +59,7 @@ export default function Multiplayer() {
         wrong: 'Wrong!',
         timedOut: 'No answer',
         wasEarlier: 'was earlier',
+        didYouKnow: 'Did you know?',
         oppLabel: 'Opponent:',
         nextRound: 'Next round starting soon...',
         youWon: '🏆 You Won!',
@@ -559,20 +560,10 @@ export default function Multiplayer() {
       }
 
       if (oppAns.timedOut) {
-        oppResultEl.innerHTML = `\u003cdiv style="color: #fbbf24; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ⏱️ ${t('timedOut')} 0pts\u003c/div>`;
+        oppResultEl.innerHTML = `<div style="color: #fbbf24; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ⏱️ ${t('timedOut')} 0pts</div>`;
         oppResultEl.style.borderColor = '#fbbf24';
         oppResultEl.style.background = 'rgba(251,191,36,0.1)';
       } else if (oppAns.isCorrect) {
-        oppResultEl.innerHTML = `\u003cdiv style="color: #22c55e; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ✅ +${oppAns.points}pts\u003c/div>`;
-        oppResultEl.style.borderColor = '#22c55e';
-        oppResultEl.style.background = 'rgba(34,197,94,0.1)';
-      } else {
-        oppResultEl.innerHTML = `\u003cdiv style="color: #ef4444; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ❌ ${oppAns.points}pts\u003c/div>`;
-        oppResultEl.style.borderColor = '#ef4444';
-        oppResultEl.style.background = 'rgba(239,68,68,0.1)';
-      }
-
-      if (oppAns.isCorrect) {
         oppResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ✅ +${oppAns.points}pts</div>`;
         oppResultEl.style.borderColor = '#22c55e';
         oppResultEl.style.background = 'rgba(34,197,94,0.1)';
@@ -597,6 +588,15 @@ export default function Multiplayer() {
           <div style="color: #94a3b8; font-size: 0.85rem;">${b.date || b.year}</div>
         </div>
       </div>`;
+
+      // Add Fun Fact section below the pair comparison
+      const funFactText = lr.fun_fact || '';
+      if (funFactText) {
+        resultPairEl.innerHTML += `<div style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border-radius: 10px; border: 1px solid rgba(99,102,241,0.2); text-align: center;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: #818cf8; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Did you know?</div>
+          <div style="font-size: 0.95rem; color: #c7d2fe; font-style: italic; line-height: 1.5;">${funFactText}</div>
+        </div>`;
+      }
 
       overlay.classList.remove('hidden');
 

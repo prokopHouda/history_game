@@ -125,6 +125,7 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
       answered: { ...answered },
       scores: { ...scores },
       round,
+      fun_fact: earlier.fun_fact || '',
     };
     nextRoundAt = new Date(Date.now() + 3500).toISOString();
 

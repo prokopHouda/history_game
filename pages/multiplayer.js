@@ -603,10 +603,14 @@ export default function Multiplayer() {
 
       overlay.classList.remove('hidden');
 
-      // Hide locally after 3.5s — do NOT call API, avoids race conditions between clients
+      // Hide locally when server says next round starts, or after default 3.5s
+      const nextRoundAt = roomData.next_round_at ? new Date(roomData.next_round_at) : null;
+      const now = new Date();
+      const delay = nextRoundAt ? Math.max(500, nextRoundAt.getTime() - now.getTime()) : 3500;
+
       setTimeout(() => {
         hideRoundResult();
-      }, 3500);
+      }, delay);
     }
 
     function hideRoundResult() {

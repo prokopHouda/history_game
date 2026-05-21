@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   // 1. Check cache
   const { data: cached } = await supabaseAdmin
     .from('event_translations')
-    .select('event_id, short_name, description')
+    .select('event_id, short_name, description, fun_fact')
     .in('event_id', idArr)
     .eq('lang', lang);
 
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   idArr.forEach((id) => {
     const hit = cached?.find((c) => c.event_id === id);
     if (hit) {
-      result[id] = { short_name: hit.short_name, description: hit.description };
+      result[id] = { short_name: hit.short_name, description: hit.description, fun_fact: hit.fun_fact };
     } else {
       missingIds.push(id);
     }
@@ -38,10 +38,10 @@ export default async function handler(req, res) {
 
     const { data: rows } = await supabaseAdmin
       .from('events')
-      .select('id, short_name, description')
+      .select('id, short_name, description, fun_fact')
       .in('id', missingIds);
 
-    const texts = rows.flatMap((r) => [r.short_name, r.description]);
+    const texts = rows.flatMap((r) => [r.short_name, r.description, r.fun_fact || '']);
 
     const params = new URLSearchParams();
     texts.forEach((t) => params.append('text', t));
@@ -65,10 +65,13 @@ export default async function handler(req, res) {
     const { translations } = await deeplRes.json();
 
     const inserts = rows.map((r, i) => {
-      const sn = translations[i * 2].text;
-      const desc = translations[i * 2 + 1].text;
-      result[r.id] = { short_name: sn, description: desc };
-      return { event_id: r.id, lang, short_name: sn, description: desc };
+      const sn = translations[i * 3].text;
+      const desc = translations[i * 3 + 1].text;
+      const ffRaw = translations[i * 3 + 2]?.text || '';
+      // Preserve empty string for events with no fun fact
+      const ff = r.fun_fact ? (ffRaw || 'No fun fact available.') : '';
+      result[r.id] = { short_name: sn, description: desc, fun_fact: ff };
+      return { event_id: r.id, lang, short_name: sn, description: desc, fun_fact: ff };
     });
 
     await supabaseAdmin.from('event_translations').insert(inserts);

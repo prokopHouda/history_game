@@ -114,6 +114,7 @@ export default function Multiplayer() {
         wrong: 'Špatně!',
         timedOut: 'Bez odpovědi',
         wasEarlier: 'bylo dřív',
+        didYouKnow: 'Věděl jsi?',
         oppLabel: 'Soupeř:',
         nextRound: 'Další kolo začíná za chvíli...',
         youWon: '🏆 Vyhrál jsi!',
@@ -166,7 +167,9 @@ export default function Multiplayer() {
         round: 'Round',
         correct: 'Corretto!',
         wrong: 'Sbagliato!',
+        timedOut: 'Nessuna risposta',
         wasEarlier: 'era prima',
+        didYouKnow: 'Lo sapevi?',
         oppLabel: 'Avversario:',
         nextRound: 'Il prossimo round inizierà a breve...',
         youWon: '🏆 Hai vinto!',
@@ -592,10 +595,10 @@ export default function Multiplayer() {
       // Add Fun Fact section below the pair comparison
       const funFactText = lr.fun_fact || '';
       if (funFactText) {
-        resultPairEl.innerHTML += `<div style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border-radius: 10px; border: 1px solid rgba(99,102,241,0.2); text-align: center;">
-          <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: #818cf8; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Did you know?</div>
-          <div style="font-size: 0.95rem; color: #c7d2fe; font-style: italic; line-height: 1.5;">${funFactText}</div>
-        </div>`;
+        resultPairEl.innerHTML += `\u003cdiv style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border-radius: 10px; border: 1px solid rgba(99,102,241,0.2); text-align: center;">
+          \u003cdiv style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: #818cf8; letter-spacing: 0.05em; margin-bottom: 0.25rem;">${t('didYouKnow')}\u003c/div>
+          \u003cdiv style="font-size: 0.95rem; color: #c7d2fe; font-style: italic; line-height: 1.5;">${funFactText}\u003c/div>
+        \u003c/div>`;
       }
 
       overlay.classList.remove('hidden');

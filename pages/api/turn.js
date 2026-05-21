@@ -39,15 +39,16 @@ function calculatePoints(a, b, isCorrect) {
   if (isCorrect) {
     return diff >= 100 ? 1 : 2;
   }
-  // No punishment — all wrong answers score 0
   return 0;
 }
+
+const TURN_TIMEOUT_MS = 45000; // 45 seconds.
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   const { roomId, playerId, choice } = req.body;
-  if (!roomId || !playerId || !choice) return res.status(400).json({ error: 'Missing fields' });
+  if (!roomId || !playerId) return res.status(400).json({ error: 'Missing fields' });
 
   const { data: room, error } = await supabase
     .from('rooms')
@@ -56,7 +57,6 @@ export default async function handler(req, res) {
     .single();
 
   if (error || !room) return res.status(404).json({ error: 'Room not found' });
-  if (room.answered && room.answered[playerId] !== undefined) return res.status(409).json({ error: 'Already answered' });
 
   const pair = room.current_pair || [];
   if (pair.length < 2) return res.status(400).json({ error: 'No active pair' });
@@ -64,14 +64,31 @@ export default async function handler(req, res) {
   const a = pair[0];
   const b = pair[1];
   const earlierId = getTime(a) < getTime(b) ? a.id : b.id;
-  const chosen = choice === 'A' ? a : b;
-  const isCorrect = chosen.id === earlierId;
 
-  const points = calculatePoints(a, b, isCorrect);
+  let answered;
+  try {
+    answered = JSON.parse(room.answered || '{}');
+  } catch {
+    answered = {};
+  }
+  if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Already answered' });
 
   const scores = { ...(room.scores || {}) };
-  const answered = { ...(room.answered || {}) };
-  answered[playerId] = { choice, isCorrect, points };
+
+  let isCorrect = false;
+  let points = 0;
+
+  if (choice === 'timeout') {
+    // Player was auto-marked as timed out by the client-side timer
+    answered[playerId] = { choice: null, isCorrect: false, points: 0, timedOut: true };
+  } else if (!choice) {
+    return res.status(400).json({ error: 'Missing choice' });
+  } else {
+    const chosen = choice === 'A' ? a : b;
+    isCorrect = chosen.id === earlierId;
+    points = calculatePoints(a, b, isCorrect);
+    answered[playerId] = { choice, isCorrect, points };
+  }
 
   const hostId = room.host;
   const bId = room.player_b;

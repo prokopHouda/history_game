@@ -26,6 +26,8 @@ export default function Multiplayer() {
     let lastShownResultRound = null;
     let pendingRaceScores = null;
     let suppressRaceTracker = false;
+    let turnTimeoutId = null;
+    let countdownInterval = null;
     const translations = {}; // { [lang]: { [id]: { short_name, description } } }
     function getLang() { return sessionStorage.getItem('mp_lang') || 'en'; }
 
@@ -55,6 +57,7 @@ export default function Multiplayer() {
         round: 'Round',
         correct: 'Correct!',
         wrong: 'Wrong!',
+        timedOut: 'No answer',
         wasEarlier: 'was earlier',
         oppLabel: 'Opponent:',
         nextRound: 'Next round starting soon...',
@@ -108,6 +111,7 @@ export default function Multiplayer() {
         round: 'Kolo',
         correct: 'Správně!',
         wrong: 'Špatně!',
+        timedOut: 'Bez odpovědi',
         wasEarlier: 'bylo dřív',
         oppLabel: 'Soupeř:',
         nextRound: 'Další kolo začíná za chvíli...',
@@ -537,16 +541,35 @@ export default function Multiplayer() {
       const oppResultEl = document.getElementById('mp-opp-result');
       const resultPairEl = document.getElementById('mp-result-pair');
 
-      if (myAns.isCorrect) {
-        myResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ ${t('correct')} <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
-          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
+      if (myAns.timedOut) {
+        myResultEl.innerHTML = `\u003cdiv style="color: #fbbf24; font-size: 1.5rem; font-weight: 800;">⏱️ ${t('timedOut')} \u003cspan style="color: #fbbf24;">0pts\u003c/span>\u003c/div>
+          \u003cdiv style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}\u003c/div>`;
+        myResultEl.style.borderColor = '#fbbf24';
+        myResultEl.style.background = 'rgba(251,191,36,0.1)';
+      } else if (myAns.isCorrect) {
+        myResultEl.innerHTML = `\u003cdiv style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ ${t('correct')} \u003cspan style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts\u003c/span>\u003c/div>
+          \u003cdiv style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}\u003c/div>`;
         myResultEl.style.borderColor = '#22c55e';
         myResultEl.style.background = 'rgba(34,197,94,0.1)';
       } else {
-        myResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.5rem; font-weight: 800;">❌ ${t('wrong')} <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
-          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
+        myResultEl.innerHTML = `\u003cdiv style="color: #ef4444; font-size: 1.5rem; font-weight: 800;">❌ ${t('wrong')} \u003cspan style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts\u003c/span>\u003c/div>
+          \u003cdiv style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}\u003c/div>`;
         myResultEl.style.borderColor = '#ef4444';
         myResultEl.style.background = 'rgba(239,68,68,0.1)';
+      }
+
+      if (oppAns.timedOut) {
+        oppResultEl.innerHTML = `\u003cdiv style="color: #fbbf24; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ⏱️ ${t('timedOut')} 0pts\u003c/div>`;
+        oppResultEl.style.borderColor = '#fbbf24';
+        oppResultEl.style.background = 'rgba(251,191,36,0.1)';
+      } else if (oppAns.isCorrect) {
+        oppResultEl.innerHTML = `\u003cdiv style="color: #22c55e; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ✅ +${oppAns.points}pts\u003c/div>`;
+        oppResultEl.style.borderColor = '#22c55e';
+        oppResultEl.style.background = 'rgba(34,197,94,0.1)';
+      } else {
+        oppResultEl.innerHTML = `\u003cdiv style="color: #ef4444; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ❌ ${oppAns.points}pts\u003c/div>`;
+        oppResultEl.style.borderColor = '#ef4444';
+        oppResultEl.style.background = 'rgba(239,68,68,0.1)';
       }
 
       if (oppAns.isCorrect) {
@@ -658,12 +681,39 @@ export default function Multiplayer() {
       const ans = room.answered || {};
       const myAns = ans[playerId];
 
+      // Clear any existing countdown
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      if (turnTimeoutId) {
+        clearTimeout(turnTimeoutId);
+        turnTimeoutId = null;
+      }
+
       if (myAns) {
         document.getElementById('mp-status').textContent = t('waitingOpp');
         document.getElementById('mp-cardA').classList.add('disabled');
         document.getElementById('mp-cardB').classList.add('disabled');
       } else {
-        document.getElementById('mp-status').textContent = t('yourTurn');
+        const deadline = Date.now() + 45000;
+        const updateCountdown = () => {
+          const remaining = Math.ceil((deadline - Date.now()) / 1000);
+          if (remaining <= 0) {
+            document.getElementById('mp-status').textContent = t('waitingOpp');
+            document.getElementById('mp-cardA').classList.add('disabled');
+            document.getElementById('mp-cardB').classList.add('disabled');
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+            return;
+          }
+          document.getElementById('mp-status').textContent = `${t('yourTurn')} (${remaining}s)`;
+        };
+        updateCountdown();
+        countdownInterval = setInterval(updateCountdown, 1000);
+        turnTimeoutId = setTimeout(() => {
+          guess('timeout');
+        }, 45000);
         document.getElementById('mp-cardA').classList.remove('disabled');
         document.getElementById('mp-cardB').classList.remove('disabled');
       }

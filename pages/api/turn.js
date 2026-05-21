@@ -111,6 +111,22 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
       scores[pid] = (scores[pid] || 0) + ans.points;
     });
 
+    // Determine which event was earlier
+    const earlier = getTime(a) < getTime(b) ? a : b;
+
+    // Fetch fun_fact for the earlier event directly from DB
+    let funFact = '';
+    try {
+      const { data: factData } = await supabase
+        .from('events')
+        .select('fun_fact')
+        .eq('id', earlier.id)
+        .single();
+      if (factData?.fun_fact) funFact = factData.fun_fact;
+    } catch (e) {
+      console.error('Failed to fetch fun_fact', e);
+    }
+
     round += 1;
     const events = room.events || [];
     if (events.length >= 2) {
@@ -118,14 +134,13 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
     }
 
     // Build result summary for the round that just ended
-    const earlier = getTime(a) < getTime(b) ? a : b;
     lastResult = {
       pair: [a, b],
       earlier,
       answered: { ...answered },
       scores: { ...scores },
       round,
-      fun_fact: earlier.fun_fact || '',
+      fun_fact: funFact,
     };
     nextRoundAt = new Date(Date.now() + 3500).toISOString();
 

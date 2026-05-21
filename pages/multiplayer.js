@@ -712,7 +712,11 @@ export default function Multiplayer() {
         updateCountdown();
         countdownInterval = setInterval(updateCountdown, 1000);
         turnTimeoutId = setTimeout(() => {
-          guess('timeout');
+          // Safety: only auto-submit if we still haven't answered
+          const currentAns = room?.answered || {};
+          if (currentAns[playerId] === undefined) {
+            guess('timeout');
+          }
         }, 45000);
         document.getElementById('mp-cardA').classList.remove('disabled');
         document.getElementById('mp-cardB').classList.remove('disabled');

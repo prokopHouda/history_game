@@ -19,6 +19,13 @@ export default function Multiplayer() {
       sessionStorage.setItem('mp_player_id', playerId);
     }
 
+    // Restore language preference from previous session
+    const savedLang = sessionStorage.getItem('mp_lang');
+    if (savedLang) {
+      const langSel = document.getElementById('mp-langSelect');
+      if (langSel) langSel.value = savedLang;
+    }
+
     let room = null;
     let channel = null;
     let allEvents = [];
@@ -28,7 +35,10 @@ export default function Multiplayer() {
     let suppressRaceTracker = false;
     let turnTimeoutId = null;
     let countdownInterval = null;
-    const translations = {}; // { [lang]: { [id]: { short_name, description } } }
+    let heartbeatInterval = null;
+    let disconnectCheckInterval = null;
+    let opponentDisconnected = false;
+    const translations = {}; // { [lang]: { [id]: { short_name, description, fun_fact } } }
     function getLang() { return sessionStorage.getItem('mp_lang') || 'en'; }
 
     const uiText = {
@@ -60,6 +70,10 @@ export default function Multiplayer() {
         timedOut: 'No answer',
         wasEarlier: 'was earlier',
         didYouKnow: 'Did you know?',
+        oppLeft: 'Your opponent has fled in terror. Probably afraid of your historical knowledge.',
+        oppLeftSub: 'History will remember their cowardice. You win automatically!',
+        oppLeftTitle: 'Opponent Fled',
+        backToLobby: 'Back to Lobby',
         oppLabel: 'Opponent:',
         nextRound: 'Next round starting soon...',
         youWon: '🏆 You Won!',
@@ -115,6 +129,10 @@ export default function Multiplayer() {
         timedOut: 'Bez odpovědi',
         wasEarlier: 'bylo dřív',
         didYouKnow: 'Věděl jsi?',
+        oppLeft: 'Tvůj soupeř utekl v hrůze. Asi se tě bojí...',
+        oppLeftSub: 'Dějiny si zapamatují jeho zbabělost. Vítězíš automaticky!',
+        oppLeftTitle: 'Soupeř utekl',
+        backToLobby: 'Zpět do lobby',
         oppLabel: 'Soupeř:',
         nextRound: 'Další kolo začíná za chvíli...',
         youWon: '🏆 Vyhrál jsi!',
@@ -170,6 +188,10 @@ export default function Multiplayer() {
         timedOut: 'Nessuna risposta',
         wasEarlier: 'era prima',
         didYouKnow: 'Lo sapevi?',
+        oppLeft: 'Il tuo avversario è fuggito nel terrore. Probabilmente ti teme...',
+        oppLeftSub: 'La storia ricorderà la sua codardia. Hai vinto automaticamente!',
+        oppLeftTitle: 'Avversario fuggito',
+        backToLobby: 'Torna alla lobby',
         oppLabel: 'Avversario:',
         nextRound: 'Il prossimo round inizierà a breve...',
         youWon: '🏆 Hai vinto!',
@@ -228,6 +250,7 @@ export default function Multiplayer() {
       document.getElementById('mp-race-opp-label').textContent = t('opponent');
       document.getElementById('mp-next-round').textContent = t('nextRound');
       document.getElementById('btn-play-again').textContent = t('playAgain');
+      document.getElementById('btn-back-lobby').textContent = t('backToLobby');
     }
 
     async function initLobby() {
@@ -420,8 +443,21 @@ export default function Multiplayer() {
             showRoundResult(newRoom);
             suppressRaceTracker = true;
           }
+
+          // Show result overlay if there's a result for a round we haven't seen yet
+          if (newRoom.last_result) {
+            showRoundResult(newRoom);
+            suppressRaceTracker = true;
+          }
+
+          // Opponent disconnect detection is handled by the server poll below
+          // (client-side Date.now() is unreliable due to clock skew).
         })
         .subscribe();
+
+      // Poll server-side heartbeat check every 5s — only reliable disconnect detection
+      if (disconnectCheckInterval) clearInterval(disconnectCheckInterval);
+      disconnectCheckInterval = setInterval(checkHeartbeatOnce, 5000);
     }
 
     async function ensureTranslated(events) {
@@ -459,12 +495,20 @@ export default function Multiplayer() {
       document.getElementById('mp-lobby').classList.add('hidden');
       document.getElementById('mp-waiting').classList.remove('hidden');
       document.getElementById('mp-waiting-msg').textContent = msg;
+      // Start sending heartbeats once in a room context
+      if (!heartbeatInterval) {
+        heartbeatInterval = setInterval(sendHeartbeat, 10000);
+      }
     }
 
     function showGame() {
       document.getElementById('mp-lobby').classList.add('hidden');
       document.getElementById('mp-waiting').classList.add('hidden');
       document.getElementById('mp-game').classList.remove('hidden');
+      // Ensure heartbeat sender is running for both players once in-game
+      if (!heartbeatInterval) {
+        heartbeatInterval = setInterval(sendHeartbeat, 10000);
+      }
     }
 
     function showWinner(roomData) {
@@ -756,6 +800,77 @@ export default function Multiplayer() {
       }
     }
 
+    async function sendHeartbeat() {
+      if (!room || !room.code) return;
+      try {
+        await fetch('/api/room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'heartbeat', roomCode: room.code, playerId }),
+        });
+      } catch (err) {
+        console.error('Heartbeat failed', err);
+      }
+    }
+
+    let lastOppCheckAlive = null;
+
+    async function checkHeartbeatOnce() {
+      if (!room || !room.code || room.state === 'finished' || room.state === 'lobby' || opponentDisconnected) return;
+      try {
+        const res = await fetch('/api/room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'check-heartbeat', roomCode: room.code, playerId }),
+        });
+        if (!res.ok) {
+          console.warn('[heartbeat check] non-ok response', res.status);
+          return;
+        }
+        const data = await res.json();
+        console.log('[heartbeat check] alive:', data.alive, 'room:', room.code);
+        if (data.alive === true) {
+          lastOppCheckAlive = Date.now();
+        }
+        if (data.alive === false) {
+          showDisconnectOverlay();
+        }
+      } catch (e) {
+        console.error('Heartbeat check failed', e);
+      }
+    }
+
+    async function showDisconnectOverlay() {
+      if (opponentDisconnected) return;
+      opponentDisconnected = true;
+      // Stop local timers
+      if (turnTimeoutId) { clearTimeout(turnTimeoutId); turnTimeoutId = null; }
+      if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+      if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+      if (disconnectCheckInterval) { clearInterval(disconnectCheckInterval); disconnectCheckInterval = null; }
+      // Show disconnect overlay
+      document.getElementById('mp-game')?.classList.add('hidden');
+      document.getElementById('mp-result-overlay')?.classList.add('hidden');
+      document.getElementById('mp-winner')?.classList.add('hidden');
+      document.getElementById('mp-disconnect')?.classList.remove('hidden');
+      const msgs = uiText[getLang()] || uiText.en;
+      document.getElementById('mp-disconnect-title').textContent = '🏃 ' + (msgs.oppLeftTitle || 'Opponent Fled');
+      document.getElementById('mp-disconnect-subtitle').textContent = msgs.oppLeft || '';
+      document.getElementById('mp-disconnect-msg').textContent = msgs.oppLeftSub || '';
+      // Optionally auto-finish the game for this player after a delay
+      if (room && room.id && room.state !== 'finished') {
+        try {
+          await fetch('/api/finish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roomId: room.id, playerId }),
+          });
+        } catch (e) {
+          console.error('Auto-finish failed', e);
+        }
+      }
+    }
+
     async function guess(side) {
       if (!room || !room.id) return;
       const ans = room.answered || {};
@@ -791,6 +906,7 @@ export default function Multiplayer() {
     document.getElementById('mp-cardA')?.addEventListener('click', () => guess('A'));
     document.getElementById('mp-cardB')?.addEventListener('click', () => guess('B'));
     document.getElementById('btn-play-again')?.addEventListener('click', () => window.location.reload());
+    document.getElementById('btn-back-lobby')?.addEventListener('click', () => window.location.reload());
     document.getElementById('mp-langSelect')?.addEventListener('change', () => {
       sessionStorage.setItem('mp_lang', document.getElementById('mp-langSelect').value);
       updateUIText();
@@ -798,6 +914,10 @@ export default function Multiplayer() {
 
     return () => {
       if (channel) supabase.removeChannel(channel);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      if (disconnectCheckInterval) clearInterval(disconnectCheckInterval);
+      if (turnTimeoutId) clearTimeout(turnTimeoutId);
+      if (countdownInterval) clearInterval(countdownInterval);
     };
   }, []);
 
@@ -950,6 +1070,16 @@ export default function Multiplayer() {
             Next round starting soon...
           </div>
           <div className="spinner" style={{ margin: '1rem auto', width: '32px', height: '32px' }} />
+        </div>
+      </div>
+
+      <div id="mp-disconnect" className="win-overlay hidden">
+        <div className="win-content">
+          <div className="win-trophy">🏃</div>
+          <h2 className="win-title" id="mp-disconnect-title" />
+          <p id="mp-disconnect-subtitle" style={{ fontSize: '1.1rem', color: '#e2e8f0', margin: '0.5rem 0' }} />
+          <p id="mp-disconnect-msg" style={{ fontSize: '1rem', color: '#94a3b8', margin: '1rem 0' }} />
+          <button className="btn-primary" id="btn-back-lobby">Back to Lobby</button>
         </div>
       </div>
 

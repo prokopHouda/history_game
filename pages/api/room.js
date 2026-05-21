@@ -50,6 +50,32 @@ export default async function handler(req, res) {
 
   const { action, roomCode, playerId, total_rounds, filters } = req.body;
 
+  if (action === 'check-heartbeat') {
+    if (!roomCode) return res.status(400).json({ error: 'Missing roomCode' });
+    const { data: existing } = await supabase.from('rooms').select('id, host, player_b, heartbeats').eq('code', roomCode.toLowerCase()).single();
+    if (!existing) return res.status(404).json({ error: 'Room not found' });
+    const now = Date.now();
+    const hb = existing.heartbeats || {};
+    // Update this player's heartbeat on check
+    hb[playerId] = new Date().toISOString();
+    await supabase.from('rooms').update({ heartbeats: hb }).eq('id', existing.id);
+    const oppId = existing.host === playerId ? existing.player_b : existing.host;
+    const oppLastBeat = oppId && hb[oppId] ? new Date(hb[oppId]).getTime() : null;
+    const alive = oppLastBeat ? (now - oppLastBeat) < 35000 : false;
+    return res.status(200).json({ alive });
+  }
+
+  if (action === 'heartbeat') {
+    if (!roomCode || !playerId) return res.status(400).json({ error: 'Missing fields' });
+    const { data: existing } = await supabase.from('rooms').select('id, heartbeats').eq('code', roomCode.toLowerCase()).single();
+    if (!existing) return res.status(404).json({ error: 'Room not found' });
+    const hb = { ...(existing.heartbeats || {}) };
+    hb[playerId] = new Date().toISOString();
+    const { error: updErr } = await supabase.from('rooms').update({ heartbeats: hb }).eq('id', existing.id);
+    if (updErr) return res.status(500).json({ error: updErr.message });
+    return res.status(200).json({ ok: true });
+  }
+
   if (action === 'create') {
     const rounds = parseInt(total_rounds, 10) || 10;
     if (rounds < 5 || rounds > 50) {
@@ -87,6 +113,7 @@ export default async function handler(req, res) {
           current_round: 1,
           last_result: null,
           next_round_at: null,
+          heartbeats: { [playerId]: new Date().toISOString() },
         })
         .select()
         .single();
@@ -109,10 +136,14 @@ export default async function handler(req, res) {
     const scores = { ...(existing.scores || {}) };
     scores[playerId] = 0;
 
+    const heartbeats = { ...(existing.heartbeats || {}) };
+    heartbeats[playerId] = new Date().toISOString();
+
     const updates = {
       player_b: playerId,
       state: 'playing',
       scores,
+      heartbeats,
     };
 
     const { data: room, error } = await supabase

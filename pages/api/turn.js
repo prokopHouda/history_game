@@ -65,11 +65,14 @@ export default async function handler(req, res) {
   const b = pair[1];
   const earlierId = getTime(a) < getTime(b) ? a.id : b.id;
 
-  let answered = room.answered || {};
-  if (typeof answered === 'string') {
-    try { answered = JSON.parse(answered); } catch { answered = {}; }
-  }
-  if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Already answered' });
+let answered;
+try {
+  answered = JSON.parse(room.answered || '{}');
+} catch {
+  answered = room.answered || {};
+  if (!answered || typeof answered !== 'object') answered = {};
+}
+if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Already answered' });
 
   const scores = { ...(room.scores || {}) };
 

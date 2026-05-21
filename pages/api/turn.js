@@ -38,9 +38,9 @@ function calculatePoints(a, b, isCorrect) {
 
   if (isCorrect) {
     return diff >= 100 ? 1 : 2;
-  } else {
-    return diff >= 100 ? -1 : 0;
   }
+  // No punishment — all wrong answers score 0
+  return 0;
 }
 
 export default async function handler(req, res) {

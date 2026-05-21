@@ -170,21 +170,23 @@ stateDiagram-v2
 flowchart TD
     A["Player submits answer"] --> B{"Is correct?"}
     B -->|Yes| C{"Year gap ≥ 100?"}
-    C -->|Yes| D["+1 point"]
-    C -->|No| E["+2 points"]
-    B -->|No| F{"Year gap ≥ 100?"}
-    F -->|Yes| G["-1 point"]
-    F -->|No| H["0 points"]
-    D --> I["Store in answered[playerId]"]
-    E --> I
-    G --> I
-    H --> I
-    I --> J{"Both answered?"}
-    J -->|Yes| K["Atomically:<br/>1. Add both scores<br/>2. Pick new pair<br/>3. Set last_result<br/>4. Clear answered"]
-    J -->|No| L["UPDATE answered only"]
-    K --> M["Broadcast via Realtime"]
-    L --> M
+    C -->|Yes| D["+1 point (simple question)"]
+    C -->|No| E["+2 points (tough question)"]
+    B -->|No| F["0 points (no punishment)"]
+    D --> G["Store in answered[playerId]"]
+    E --> G
+    F --> G
+    G --> H{"Both answered?"}
+    H -->|Yes| I["Atomically:<br/>1. Add both scores<br/>2. Pick new pair<br/>3. Set last_result<br/>4. Clear answered"]
+    H -->|No| J["UPDATE answered only"]
+    I --> K["Broadcast via Realtime"]
+    J --> K
 ```
+
+| Scenario | Year Gap | Correct Points | Wrong Points |
+|----------|----------|---------------|--------------|
+| Simple question | ≥ 100 years | +1 | **0** (no punishment) |
+| Tough question | < 100 years | +2 | **0** (no punishment) |
 
 ---
 

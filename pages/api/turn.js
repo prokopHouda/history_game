@@ -71,14 +71,11 @@ export default async function handler(req, res) {
 
   const scores = { ...(room.scores || {}) };
   const answered = { ...(room.answered || {}) };
-
-  scores[playerId] = (scores[playerId] || 0) + points;
   answered[playerId] = { choice, isCorrect, points };
 
   const hostId = room.host;
   const bId = room.player_b;
-  const answeredIds = Object.keys(answered);
-  const allAnswered = bId ? answeredIds.length === 2 : answeredIds.length === 1;
+  const allAnswered = bId ? Object.keys(answered).length === 2 : Object.keys(answered).length === 1;
 
   let nextPair = pair;
   let round = room.current_round || 0;
@@ -90,6 +87,12 @@ export default async function handler(req, res) {
   let nextRoundAt = null;
 
   if (allAnswered) {
+    // Only update scores when BOTH players have answered, so both clients
+    // see the score change coincide with the result overlay.
+    Object.entries(answered).forEach(([pid, ans]) => {
+      scores[pid] = (scores[pid] || 0) + ans.points;
+    });
+
     round += 1;
     const events = room.events || [];
     if (events.length >= 2) {

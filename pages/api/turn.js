@@ -142,8 +142,8 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
       round,
       fun_fact: funFact,
     };
-    // Extend result display to 5 seconds if there's a fun fact, so players have time to read it
-    const resultDisplayMs = funFact ? 5000 : 3500;
+    // Extend result display to 10 seconds if there's a fun fact, so players have time to read it
+    const resultDisplayMs = funFact ? 10000 : 3500;
     nextRoundAt = new Date(Date.now() + resultDisplayMs).toISOString();
 
     if (round > totalRounds) {

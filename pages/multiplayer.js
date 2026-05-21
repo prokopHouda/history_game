@@ -451,6 +451,7 @@ export default function Multiplayer() {
       return {
         short_name: t?.short_name || event.short_name || '???',
         description: t?.description || event.description || '',
+        fun_fact: t?.fun_fact || '',
       };
     }
 
@@ -593,7 +594,7 @@ export default function Multiplayer() {
       </div>`;
 
       // Add Fun Fact section below the pair comparison
-      const funFactText = lr.fun_fact || '';
+      const funFactText = earlierText.fun_fact || lr.fun_fact || '';
       if (funFactText) {
         resultPairEl.innerHTML += `\u003cdiv style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border-radius: 10px; border: 1px solid rgba(99,102,241,0.2); text-align: center;">
           \u003cdiv style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: #818cf8; letter-spacing: 0.05em; margin-bottom: 0.25rem;">${t('didYouKnow')}\u003c/div>

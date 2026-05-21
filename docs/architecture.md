@@ -181,12 +181,14 @@ flowchart TD
     H -->|No| J["UPDATE answered only"]
     I --> K["Broadcast via Realtime"]
     J --> K
+    L["Timer expires (45s)"] --> M["answered.timedOut = true, 0pts"]
+    M --> G
 ```
 
-| Scenario | Year Gap | Correct Points | Wrong Points |
-|----------|----------|---------------|--------------|
-| Simple question | ≥ 100 years | +1 | **0** (no punishment) |
-| Tough question | < 100 years | +2 | **0** (no punishment) |
+| Scenario | Year Gap | Correct Points | Wrong Points | Timed Out |
+|----------|----------|---------------|--------------|-----------|
+| Simple question | ≥ 100 years | +1 | **0** | **0** |
+| Tough question | < 100 years | +2 | **0** | **0** |
 
 ---
 

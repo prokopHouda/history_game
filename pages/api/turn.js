@@ -70,7 +70,7 @@ try {
   answered = JSON.parse(room.answered || '{}');
 } catch {
   answered = room.answered || {};
-  if (!answered || typeof answered !== 'object') answered = {};
+  if (!answered || typeof answered !== 'object' || Array.isArray(answered)) answered = {};
 }
 if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Already answered' });
 

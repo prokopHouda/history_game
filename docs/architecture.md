@@ -192,6 +192,78 @@ flowchart TD
 
 ---
 
+## Event Pairing Algorithm (`pickPair.js`)
+
+The game generates pairs of historical events for each round. To keep the game engaging, events that are **closer in time** are preferred, but distant events are not excluded entirely.
+
+### Weight Function
+
+The selection uses a **proximity-weighted random sample**. The weight for a candidate event is:
+
+```
+weight = 1 / (1 + gapYears / 100)
+```
+
+Where `gapYears` is the absolute difference in years between the two events.
+
+### Weight Examples
+
+| Year Gap | Weight | Relative Likelihood |
+|----------|--------|---------------------|
+| 0 years  | 1.000  | 3.0x vs 200-year gap |
+| 50 years | 0.667  | 2.0x vs 200-year gap |
+| 100 years| 0.500  | 1.5x vs 200-year gap |
+| 200 years| 0.333  | baseline |
+| 500 years| 0.167  | 0.5x vs 200-year gap |
+
+**Key property:** a 50-year gap is ~2x more likely to be picked than a 200-year gap. This creates more "tough questions" (≥2 points) while still allowing occasional simple ones.
+
+### Pair Generation Flow
+
+```mermaid
+flowchart TD
+    A["Start pair generation"] --> B{"Events ≥ 2?"}
+    B -->|No| C["Throw error"]
+    B -->|Yes| D["Phase 1: Weighted sampling"]
+    D --> E{"Attempt < 20?"}
+    E -->|Yes| F["Pick random event A"]
+    F --> G["Build candidate list\nexcluding duplicates"]
+    G --> H["Assign gapWeight to each candidate"]
+    H --> I["Weighted random pick → B"]
+    I --> J{"Is pair new?"}
+    J -->|Yes| K["Return [A, B]"]
+    J -->|No| E
+    E -->|No| L["Phase 2: Linear scan"]
+    L --> M["Find first unused pair"]
+    M -->|Found| K
+    M -->|Not found| N["Phase 3: Clear history"]
+    N --> O["Reset shown_pairs"]
+    O --> K
+```
+
+### Deduplication (`shown_pairs`)
+
+Each room stores a `shown_pairs` JSONB array in the `rooms` table. It contains canonical string keys of every pair already shown, formatted as:
+
+```
+canonicalKey(idA, idB) = `${min(idA, idB)}-${max(idA, idB)}`
+```
+
+This guarantees:
+- No repeated questions in a single game
+- Deterministic key regardless of which event is "A" or "B"
+- Automatic reset when all possible pairs are exhausted (nuclear fallback)
+
+### Why Proximity Weighting?
+
+| Without weighting | With weighting |
+|-------------------|----------------|
+| Random pairs → many 500+ year gaps | Most pairs are 20–100 years apart |
+| Players get bored from easy +1 rounds | More challenging +2 rounds |
+| Low skill differentiation | Tighter scores, more exciting finishes |
+
+---
+
 ## File Structure
 
 ```

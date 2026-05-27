@@ -853,27 +853,70 @@ export default function Multiplayer() {
     }
 
     function updateRaceTracker(myScore, oppScore) {
-      const myPct = Math.max(5, Math.min(95, ((myScore + 20) / 40) * 100));
-      const oppPct = Math.max(5, Math.min(95, ((oppScore + 20) / 40) * 100));
-      
+      const total = myScore + oppScore;
+      let myPct, oppPct;
+
+      if (total === 0) {
+        myPct = 50;
+        oppPct = 50;
+      } else {
+        myPct = (myScore / total) * 100;
+        oppPct = (oppScore / total) * 100;
+      }
+
+      // Keep a sliver visible so the track never looks empty
+      if (myPct < 3) myPct = 3;
+      if (myPct > 97) myPct = 97;
+      oppPct = 100 - myPct;
+
+      const myFill = document.getElementById('mp-race-me-fill');
+      const oppFill = document.getElementById('mp-race-opp-fill');
+      const center = document.getElementById('mp-race-center');
+      const centerIcon = document.getElementById('mp-race-center-icon');
+      const centerDiff = document.getElementById('mp-race-center-diff');
+      const leadMsg = document.getElementById('mp-race-lead-msg');
       const track = document.getElementById('mp-race-track');
-      const myBar = document.getElementById('mp-race-me');
-      const oppBar = document.getElementById('mp-race-opp');
-      
-      if (track && myBar && oppBar) {
-        myBar.style.width = myPct + '%';
-        oppBar.style.width = oppPct + '%';
-        
-        if (myScore > oppScore) {
-          myBar.style.background = 'linear-gradient(90deg, #22c55e, #34d399)';
-          oppBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
-        } else if (oppScore > myScore) {
-          myBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
-          oppBar.style.background = 'linear-gradient(90deg, #22c55e, #34d399)';
-        } else {
-          myBar.style.background = 'linear-gradient(90deg, #fbbf24, #f59e0b)';
-          oppBar.style.background = 'linear-gradient(90deg, #fbbf24, #f59e0b)';
+
+      if (myFill) myFill.style.width = myPct + '%';
+      if (oppFill) oppFill.style.width = oppPct + '%';
+      if (center) center.style.left = myPct + '%';
+
+      // Update score labels in the race track
+      const meScoreEl = document.getElementById('mp-race-me-score');
+      const oppScoreEl = document.getElementById('mp-race-opp-score');
+      if (meScoreEl) meScoreEl.textContent = myScore;
+      if (oppScoreEl) oppScoreEl.textContent = oppScore;
+
+      const diff = myScore - oppScore;
+
+      if (track) {
+        track.classList.remove('race-track--leading', 'race-track--losing', 'race-track--tied');
+        if (diff > 0) track.classList.add('race-track--leading');
+        else if (diff < 0) track.classList.add('race-track--losing');
+        else track.classList.add('race-track--tied');
+      }
+
+      if (diff > 0) {
+        if (centerIcon) centerIcon.textContent = '⚡';
+        if (centerDiff) {
+          centerDiff.textContent = '+' + diff;
+          centerDiff.style.color = '#22c55e';
         }
+        if (leadMsg) leadMsg.textContent = `You lead by ${diff} points`;
+      } else if (diff < 0) {
+        if (centerIcon) centerIcon.textContent = '🔥';
+        if (centerDiff) {
+          centerDiff.textContent = '+' + Math.abs(diff);
+          centerDiff.style.color = '#ef4444';
+        }
+        if (leadMsg) leadMsg.textContent = `Opponent leads by ${Math.abs(diff)} points`;
+      } else {
+        if (centerIcon) centerIcon.textContent = '⚖️';
+        if (centerDiff) {
+          centerDiff.textContent = '0';
+          centerDiff.style.color = '#fbbf24';
+        }
+        if (leadMsg) leadMsg.textContent = 'Tied — every point counts!';
       }
     }
 
@@ -1113,30 +1156,33 @@ export default function Multiplayer() {
           </div>
         </div>
 
-        <div id="mp-race-track" style={{ 
-          background: 'rgba(0,0,0,0.3)', 
-          borderRadius: '12px', 
-          padding: '0.75rem', 
-          marginBottom: '1rem',
-          border: '1px solid rgba(255,255,255,0.1)'
-        }}>
-          <div id="mp-race-title" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            🏁 Race to History Glory
+        <div id="mp-race-track" className="race-track">
+          <div className="race-header">
+            <span className="race-label race-label--me">
+              <span id="mp-race-me-label">You</span>
+              <span id="mp-race-me-score" className="race-score">0</span>
+            </span>
+            <span id="mp-race-title" style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              🏁 Race to History Glory
+            </span>
+            <span className="race-label race-label--opp">
+              <span id="mp-race-opp-label">Opp</span>
+              <span id="mp-race-opp-score" className="race-score">0</span>
+            </span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span id="mp-race-me-label" style={{ fontSize: '0.85rem', minWidth: '3rem', color: '#6366f1' }}>You</span>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: '999px', height: '12px', overflow: 'hidden' }}>
-                <div id="mp-race-me" style={{ width: '50%', height: '100%', borderRadius: '999px', transition: 'all 0.6s ease', background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
+
+          <div className="race-bar-outer">
+            <div className="race-bar-inner">
+              <div id="mp-race-me-fill" className="race-fill race-fill--me" style={{ width: '50%' }} />
+              <div id="mp-race-center" className="race-center" style={{ left: '50%' }}>
+                <span id="mp-race-center-icon" className="race-center-icon">⚖️</span>
+                <span id="mp-race-center-diff" className="race-center-diff">0</span>
               </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span id="mp-race-opp-label" style={{ fontSize: '0.85rem', minWidth: '3rem', color: '#ef4444' }}>Opp</span>
-              <div style={{ flex: 1, background: 'rgba(255,255,255,0.1)', borderRadius: '999px', height: '12px', overflow: 'hidden' }}>
-                <div id="mp-race-opp" style={{ width: '50%', height: '100%', borderRadius: '999px', transition: 'all 0.6s ease', background: 'linear-gradient(90deg, #ef4444, #f87171)' }} />
-              </div>
+              <div id="mp-race-opp-fill" className="race-fill race-fill--opp" style={{ width: '50%' }} />
             </div>
           </div>
+
+          <div id="mp-race-lead-msg" className="race-lead-msg">Tied — every point counts!</div>
         </div>
 
         <div id="mp-round" style={{ textAlign: 'center', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }} />

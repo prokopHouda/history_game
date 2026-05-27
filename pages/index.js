@@ -74,7 +74,17 @@ export default function Home() {
         playAgain: 'Play Again',
         eventsAvailable: 'events available',
         needMore: 'Pick broader filters — need at least',
-        toPlay: 'to play'
+        toPlay: 'to play',
+        allRegions: 'All regions',
+        allCountries: 'All countries',
+        checkingPool: 'Checking pool…',
+        year: 'Year',
+        preparing: 'Preparing next events…',
+        winRank: 'King of Historical Knowledge',
+        missingEnv: 'Missing Supabase env vars',
+        error: 'Error:',
+        crash: 'Crash:',
+        needEventsTable: 'Need at least 2 events in the table.',
       },
       cs: {
         title: 'Co se stalo dříve?',
@@ -104,7 +114,17 @@ export default function Home() {
         playAgain: 'Hrát znovu',
         eventsAvailable: 'událostí k dispozici',
         needMore: 'Vyber méně restriktivní filtry — potřebuješ alespoň',
-        toPlay: 'k hraní'
+        toPlay: 'k hraní',
+        allRegions: 'Všechny regiony',
+        allCountries: 'Všechny země',
+        checkingPool: 'Kontroluji dostupnost...',
+        year: 'Rok',
+        preparing: 'Příprava dalších událostí…',
+        winRank: 'Král historických znalostí',
+        error: 'Chyba:',
+        crash: 'Pád:',
+        needEventsTable: 'V tabulce musí být alespoň 2 události.',
+        missingEnv: 'Chybí Supabase proměnné prostředí',
       },
       it: {
         title: 'Quale è avvenuto prima?',
@@ -134,7 +154,17 @@ export default function Home() {
         playAgain: 'Gioca ancora',
         eventsAvailable: 'eventi disponibili',
         needMore: 'Allarga i filtri — servono almeno',
-        toPlay: 'per giocare'
+        toPlay: 'per giocare',
+        allRegions: 'Tutte le regioni',
+        allCountries: 'Tutti i paesi',
+        checkingPool: 'Verifico disponibilità...',
+        year: 'Anno',
+        preparing: 'Preparazione prossimi eventi…',
+        winRank: 'Re della conoscenza storica',
+        error: 'Errore:',
+        crash: 'Errore critico:',
+        needEventsTable: 'Servono almeno 2 eventi nella tabella.',
+        missingEnv: 'Variabili d\'ambiente Supabase mancanti',
       }
     };
 
@@ -194,7 +224,7 @@ export default function Home() {
     }
 
     function getLabel(e) {
-      return e.date ? e.date : `Year ${e.year}`;
+      return e.date ? e.date : `${t('year')} ${e.year}`;
     }
 
     function countMatchingEvents() {
@@ -245,7 +275,7 @@ export default function Home() {
     function populateFilters(data) {
       const regions = [...new Set(data.map((e) => e.region).filter(Boolean))].sort();
       const regionSel = document.getElementById('regionFilter');
-      regionSel.innerHTML = '<option value="">All regions</option>';
+      regionSel.innerHTML = '<option value="">' + t('allRegions') + '</option>';
       regions.forEach((r) => {
         const opt = document.createElement('option');
         opt.value = r;
@@ -264,7 +294,7 @@ export default function Home() {
       });
       const countries = [...countrySet].sort();
       const countrySel = document.getElementById('countryFilter');
-      countrySel.innerHTML = '<option value="">All countries</option>';
+      countrySel.innerHTML = '<option value="">' + t('allCountries') + '</option>';
       countries.forEach((c) => {
         const opt = document.createElement('option');
         opt.value = c;
@@ -553,11 +583,11 @@ export default function Home() {
           .select('id, short_name, date, year, description, countries, region');
 
         if (error) {
-          document.getElementById('loading').textContent = 'Error: ' + error.message;
+          document.getElementById('loading').textContent = t('error') + ' ' + error.message;
           return;
         }
         if (!data || data.length < 2) {
-          document.getElementById('loading').textContent = 'Need at least 2 events in the table.';
+          document.getElementById('loading').textContent = t('needEventsTable');
           return;
         }
 
@@ -566,7 +596,7 @@ export default function Home() {
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('settings').classList.remove('hidden');
       } catch (err) {
-        document.getElementById('loading').textContent = 'Crash: ' + err.message;
+        document.getElementById('loading').textContent = t('crash') + ' ' + err.message;
         console.error(err);
       }
     }

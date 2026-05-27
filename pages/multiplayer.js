@@ -77,7 +77,7 @@ export default function Multiplayer() {
         oppLeftTitle: 'Opponent Fled',
         backToLobby: 'Back to Lobby',
         oppLabel: 'Opponent:',
-        nextRound: 'Next round starting soon...',
+        roomInfo: 'Room code: {code} — {rounds} rounds',
         youWon: '🏆 You Won!',
         youLost: '😅 You Lost!',
         tie: "🤝 It's a Tie!",
@@ -155,6 +155,7 @@ export default function Multiplayer() {
         oppLeftTitle: 'Soupeř utekl',
         backToLobby: 'Zpět do lobby',
         oppLabel: 'Soupeř:',
+        roomInfo: 'Kód místnosti: {code} — {rounds} kol',
         nextRound: 'Další kolo začíná za chvíli...',
         youWon: '🏆 Vyhrál jsi!',
         youLost: '😅 Prohrál jsi!',
@@ -233,6 +234,7 @@ export default function Multiplayer() {
         oppLeftTitle: 'Avversario fuggito',
         backToLobby: 'Torna alla lobby',
         oppLabel: 'Avversario:',
+        roomInfo: 'Codice stanza: {code} — {rounds} round',
         nextRound: 'Il prossimo round inizierà a breve...',
         youWon: '🏆 Hai vinto!',
         youLost: '😅 Hai perso!',
@@ -466,7 +468,7 @@ export default function Multiplayer() {
         const json = await res.json();
         if (json.room) {
           room = json.room;
-          showLobby(`Room code: ${room.code} — ${room.total_rounds} rounds`);
+          showLobby(tf('roomInfo', { code: room.code, rounds: room.total_rounds }));
           subscribeToRoom(room.code);
         } else {
           document.getElementById('mp-loading').classList.remove('hidden');

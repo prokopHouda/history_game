@@ -83,7 +83,6 @@ export default function Multiplayer() {
         tie: "🤝 It's a Tie!",
         waitingOpp: 'Waiting for opponent...',
         waitingRestart: 'Waiting for opponent...',
-        playAgain: 'Play Again',
         winnerWin: [
           'History bows before your greatness!',
           'You are the true Chronomancer!',
@@ -104,6 +103,24 @@ export default function Multiplayer() {
           'Split decision — rematch time!',
           'You are equally matched in time!',
         ],
+        allRegions: 'All regions',
+        allCountries: 'All countries',
+        placeholderStartYear: 'e.g. 1500',
+        placeholderEndYear: 'e.g. 2000',
+        placeholderRoomCode: 'abc',
+        checkingPool: 'Checking pool…',
+        youLeadBy: 'You lead by {diff} points',
+        oppLeadsBy: 'Opponent leads by {diff} points',
+        tiedRace: 'Tied — every point counts!',
+        newGame: 'New Game',
+        missingEnv: 'Missing Supabase env vars',
+        sending: 'Sending...',
+        networkError: 'Network error. Please try again.',
+        failedCreate: 'Failed to create room',
+        failedJoin: 'Failed to join room',
+        roundsRange: 'Rounds must be 5–50 ❌',
+        needEvents: 'Need at least {min} events to play ({count}) ❌',
+        creating: 'Creating...',
       },
       cs: {
         title: 'Multiplayer',
@@ -164,6 +181,24 @@ export default function Multiplayer() {
           'Rozdílný verdikt — odveta!',
           'Jste vyrovnaní v čase!',
         ],
+        youLeadBy: 'Vedeš o {diff} bodů',
+        oppLeadsBy: 'Soupeř vede o {diff} bodů',
+        tiedRace: 'Remíza — každý bod se počítá!',
+        newGame: 'Nová hra',
+        missingEnv: 'Chybí Supabase proměnné prostředí',
+        sending: 'Odesílání...',
+        networkError: 'Chyba sítě. Zkus to znovu.',
+        failedCreate: 'Nepodařilo se vytvořit místnost',
+        failedJoin: 'Nepodařilo se připojit do místnosti',
+        roundsRange: 'Kol musí být 5–50 ❌',
+        needEvents: 'Potřebuješ alespoň {min} událostí ke hře ({count}) ❌',
+        creating: 'Vytváření...',
+        allRegions: 'Všechny regiony',
+        allCountries: 'Všechny země',
+        placeholderStartYear: 'např. 1500',
+        placeholderEndYear: 'např. 2000',
+        placeholderRoomCode: 'abc',
+        checkingPool: 'Kontroluji dostupnost...',
       },
       it: {
         title: 'Multiplayer',
@@ -224,12 +259,32 @@ export default function Multiplayer() {
           'Decisione in parità — rivincita!',
           'Siete alla pari nel tempo!',
         ],
+        youLeadBy: 'Stai in testa di {diff} punti',
+        oppLeadsBy: 'L\'avversario è in testa di {diff} punti',
+        tiedRace: 'Pareggio — ogni punto conta!',
+        newGame: 'Nuova partita',
+        missingEnv: 'Variabili d\'ambiente Supabase mancanti',
+        sending: 'Invio in corso...',
+        networkError: 'Errore di rete. Riprova.',
+        failedCreate: 'Impossibile creare la stanza',
+        failedJoin: 'Impossibile unirsi alla stanza',
+        roundsRange: 'I round devono essere 5–50 ❌',
+        needEvents: 'Servono almeno {min} eventi per giocare ({count}) ❌',
+        creating: 'Creazione in corso...',
       },
     };
 
     function t(key) {
       const l = getLang();
       return uiText[l]?.[key] ?? uiText.en[key] ?? key;
+    }
+
+    function tf(key, vars = {}) {
+      let text = t(key);
+      Object.entries(vars).forEach(([k, v]) => {
+        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+      });
+      return text;
     }
 
     function updateUIText() {
@@ -257,6 +312,15 @@ export default function Multiplayer() {
       document.getElementById('mp-next-round').textContent = t('nextRound');
       document.getElementById('btn-play-again').textContent = t('playAgain');
       document.getElementById('btn-back-lobby').textContent = t('backToLobby');
+      document.getElementById('btn-new-game').textContent = t('newGame');
+      document.getElementById('mp-startYear').placeholder = t('placeholderStartYear');
+      document.getElementById('mp-endYear').placeholder = t('placeholderEndYear');
+      document.getElementById('joinCode').placeholder = t('placeholderRoomCode');
+      // Update filter dropdown default texts if not yet populated
+      const regionSel = document.getElementById('mp-regionFilter');
+      if (regionSel && regionSel.options[0]) regionSel.options[0].textContent = t('allRegions');
+      const countrySel = document.getElementById('mp-countryFilter');
+      if (countrySel && countrySel.options[0]) countrySel.options[0].textContent = t('allCountries');
     }
 
     async function initLobby() {
@@ -312,7 +376,7 @@ export default function Multiplayer() {
         startBtn.style.opacity = '1';
         startBtn.style.cursor = 'pointer';
       } else {
-        counterEl.textContent = `Need at least ${MIN_EVENTS} events to play (${count}) ❌`;
+        counterEl.textContent = tf('needEvents', { min: MIN_EVENTS, count });
         counterEl.style.color = '#f87171';
         startBtn.disabled = true;
         startBtn.style.opacity = '0.5';
@@ -323,7 +387,7 @@ export default function Multiplayer() {
     function populateFilters(data) {
       const regions = [...new Set(data.map((e) => e.region).filter(Boolean))].sort();
       const regionSel = document.getElementById('mp-regionFilter');
-      regionSel.innerHTML = '<option value="">All regions</option>';
+      regionSel.innerHTML = '<option value="">' + t('allRegions') + '</option>';
       regions.forEach((r) => {
         const opt = document.createElement('option');
         opt.value = r;
@@ -342,7 +406,7 @@ export default function Multiplayer() {
       });
       const countries = [...countrySet].sort();
       const countrySel = document.getElementById('mp-countryFilter');
-      countrySel.innerHTML = '<option value="">All countries</option>';
+      countrySel.innerHTML = '<option value="">' + t('allCountries') + '</option>';
       countries.forEach((c) => {
         const opt = document.createElement('option');
         opt.value = c;
@@ -362,12 +426,12 @@ export default function Multiplayer() {
       btn.disabled = true;
       btn.innerHTML = `<div style="display:inline-flex;align-items:center;gap:0.5rem;">
         <div style="width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-        Creating...
+        ${t('creating')}
       </div>`;
 
       const rounds = parseInt(document.getElementById('roundsInput').value, 10) || 10;
       if (rounds < 5 || rounds > 50) {
-        document.getElementById('mp-poolCounter').textContent = 'Rounds must be 5–50 ❌';
+        document.getElementById('mp-poolCounter').textContent = t('roundsRange');
         document.getElementById('mp-poolCounter').style.color = '#f87171';
         btn.disabled = false;
         btn.textContent = originalText;
@@ -376,7 +440,7 @@ export default function Multiplayer() {
 
       const { count, valid } = countMatchingEvents();
       if (!valid) {
-        document.getElementById('mp-poolCounter').textContent = `Need at least ${MIN_EVENTS} events (${count}) ❌`;
+        document.getElementById('mp-poolCounter').textContent = tf('needEvents', { min: MIN_EVENTS, count });
         document.getElementById('mp-poolCounter').style.color = '#f87171';
         btn.disabled = false;
         btn.textContent = originalText;
@@ -406,13 +470,13 @@ export default function Multiplayer() {
           subscribeToRoom(room.code);
         } else {
           document.getElementById('mp-loading').classList.remove('hidden');
-          document.getElementById('mp-loading').textContent = json.error || 'Failed to create room';
+          document.getElementById('mp-loading').textContent = json.error || t('failedCreate');
           btn.disabled = false;
           btn.textContent = originalText;
         }
       } catch (err) {
         document.getElementById('mp-loading').classList.remove('hidden');
-        document.getElementById('mp-loading').textContent = 'Network error. Please try again.';
+        document.getElementById('mp-loading').textContent = t('networkError');
         btn.disabled = false;
         btn.textContent = originalText;
       }
@@ -438,7 +502,7 @@ export default function Multiplayer() {
         subscribeToRoom(room.code);
       } else {
         document.getElementById('mp-loading').classList.remove('hidden');
-        document.getElementById('mp-loading').textContent = json.error || 'Failed to join room';
+        document.getElementById('mp-loading').textContent = json.error || t('failedJoin');
       }
     }
 
@@ -901,21 +965,21 @@ export default function Multiplayer() {
           centerDiff.textContent = '+' + diff;
           centerDiff.style.color = '#22c55e';
         }
-        if (leadMsg) leadMsg.textContent = `You lead by ${diff} points`;
+        if (leadMsg) leadMsg.textContent = tf('youLeadBy', { diff });
       } else if (diff < 0) {
         if (centerIcon) centerIcon.textContent = '🔥';
         if (centerDiff) {
           centerDiff.textContent = '+' + Math.abs(diff);
           centerDiff.style.color = '#ef4444';
         }
-        if (leadMsg) leadMsg.textContent = `Opponent leads by ${Math.abs(diff)} points`;
+        if (leadMsg) leadMsg.textContent = tf('oppLeadsBy', { diff: Math.abs(diff) });
       } else {
         if (centerIcon) centerIcon.textContent = '⚖️';
         if (centerDiff) {
           centerDiff.textContent = '0';
           centerDiff.style.color = '#fbbf24';
         }
-        if (leadMsg) leadMsg.textContent = 'Tied — every point counts!';
+        if (leadMsg) leadMsg.textContent = t('tiedRace');
       }
     }
 
@@ -1027,7 +1091,7 @@ export default function Multiplayer() {
       const ans = room.answered || {};
       if (ans[playerId]) return;
 
-      document.getElementById('mp-status').textContent = 'Sending...';
+      document.getElementById('mp-status').textContent = t('sending');
       document.getElementById('mp-cardA').classList.add('disabled');
       document.getElementById('mp-cardB').classList.add('disabled');
 
@@ -1046,7 +1110,7 @@ export default function Multiplayer() {
           }
         }
       } catch (err) {
-        document.getElementById('mp-status').textContent = 'Network error.';
+        document.getElementById('mp-status').textContent = t('networkError');
         document.getElementById('mp-cardA').classList.remove('disabled');
         document.getElementById('mp-cardB').classList.remove('disabled');
       }

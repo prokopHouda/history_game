@@ -194,11 +194,19 @@ flowchart TD
 
 ## Event Pairing Algorithm (`pickPair.js`)
 
-The game generates pairs of historical events for each round. To keep the game engaging, events that are **closer in time** are preferred, but distant events are not excluded entirely.
+The game generates pairs of historical events for each round. Events that are **closer in time** are preferred, but with a **hard minimum gap of 10 years** — events 10 years apart or less are completely excluded from pairing. This prevents ambiguous "too-close-to-call" rounds while still favoring challenging nearby dates over easy distant ones.
+
+### Minimum Gap Rule
+
+```
+MIN_GAP_YEARS = 10
+```
+
+Any candidate event where `gapYears ≤ 10` is **rejected immediately** before weight calculation. This applies to **all three** generation phases (weighted sampling, linear scan fallback, and nuclear fallback).
 
 ### Weight Function
 
-The selection uses a **proximity-weighted random sample**. The weight for a candidate event is:
+After filtering out gaps ≤ 10 years, the selection uses a **proximity-weighted random sample**. The weight for a remaining candidate is:
 
 ```
 weight = 1 / (1 + gapYears / 100)
@@ -208,15 +216,18 @@ Where `gapYears` is the absolute difference in years between the two events.
 
 ### Weight Examples
 
-| Year Gap | Weight | Relative Likelihood |
-|----------|--------|---------------------|
-| 0 years  | 1.000  | 3.0x vs 200-year gap |
-| 50 years | 0.667  | 2.0x vs 200-year gap |
-| 100 years| 0.500  | 1.5x vs 200-year gap |
-| 200 years| 0.333  | baseline |
-| 500 years| 0.167  | 0.5x vs 200-year gap |
+| Year Gap | Weight | Relative Likelihood | Eligible? |
+|----------|--------|---------------------|-----------|
+| 5 years  | 0.667  | 2.0x vs 20-year gap | ❌ Rejected (≤10) |
+| 10 years | 0.500  | 1.5x vs 20-year gap | ❌ Rejected (≤10) |
+| 11 years | 0.476  | 1.4x vs 20-year gap | ✅ Yes |
+| 20 years | 0.333  | baseline | ✅ Yes |
+| 50 years | 0.167  | 0.5x vs 20-year gap | ✅ Yes |
+| 100 years| 0.091  | 0.27x vs 20-year gap | ✅ Yes |
+| 200 years| 0.048  | 0.14x vs 20-year gap | ✅ Yes |
+| 500 years| 0.020  | 0.06x vs 20-year gap | ✅ Yes |
 
-**Key property:** a 50-year gap is ~2x more likely to be picked than a 200-year gap. This creates more "tough questions" (≥2 points) while still allowing occasional simple ones.
+**Key property:** now that the 0–10 year range is excluded, the effective "sweet spot" shifts to 11–50 year gaps. A 20-year gap is the new most-likely baseline, making most rounds challenging (+2 points) while still allowing occasional simpler 100+ year pairs.
 
 ### Pair Generation Flow
 
@@ -228,17 +239,23 @@ flowchart TD
     D --> E{"Attempt < 20?"}
     E -->|Yes| F["Pick random event A"]
     F --> G["Build candidate list\nexcluding duplicates"]
-    G --> H["Assign gapWeight to each candidate"]
-    H --> I["Weighted random pick → B"]
-    I --> J{"Is pair new?"}
-    J -->|Yes| K["Return [A, B]"]
-    J -->|No| E
-    E -->|No| L["Phase 2: Linear scan"]
-    L --> M["Find first unused pair"]
-    M -->|Found| K
-    M -->|Not found| N["Phase 3: Clear history"]
-    N --> O["Reset shown_pairs"]
-    O --> K
+    G --> H{"Gap > MIN_GAP?"}
+    H -->|No| G
+    H -->|Yes| I["Assign gapWeight to each candidate"]
+    I --> J["Weighted random pick → B"]
+    J --> K{"Is pair new?"}
+    K -->|Yes| L["Return [A, B]"]
+    K -->|No| E
+    E -->|No| M["Phase 2: Linear scan"]
+    M --> N{"Gap > MIN_GAP?"}
+    N -->|No| M
+    N -->|Yes| O["Find first unused pair"]
+    O -->|Found| L
+    O -->|Not found| P["Phase 3: Clear history"]
+    P --> Q{"Gap > MIN_GAP?"}
+    Q -->|No| P
+    Q -->|Yes| R["Reset shown_pairs"]
+    R --> L
 ```
 
 ### Deduplication (`shown_pairs`)
@@ -252,15 +269,16 @@ canonicalKey(idA, idB) = `${min(idA, idB)}-${max(idA, idB)}`
 This guarantees:
 - No repeated questions in a single game
 - Deterministic key regardless of which event is "A" or "B"
-- Automatic reset when all possible pairs are exhausted (nuclear fallback)
+- Automatic reset when all valid pairs are exhausted (nuclear fallback)
 
-### Why Proximity Weighting?
+### Why Proximity Weighting + Minimum Gap?
 
-| Without weighting | With weighting |
-|-------------------|----------------|
-| Random pairs → many 500+ year gaps | Most pairs are 20–100 years apart |
-| Players get bored from easy +1 rounds | More challenging +2 rounds |
-| Low skill differentiation | Tighter scores, more exciting finishes |
+| Without any weighting | With proximity weighting only | With weighting + 10-year MIN_GAP |
+|-------------------|----------------|---------------------------------|
+| Random pairs → many 500+ year gaps | Most pairs are 20–100 years apart | Most pairs are **11–50 years** apart |
+| Players get bored from easy +1 rounds | More challenging +2 rounds | **Even more** +2 rounds |
+| Occasional 2-year ambiguity | 0–10 year ambiguities possible | **Zero ambiguity** — every round is decidable |
+| Low skill differentiation | Tighter scores | Tighter scores + clearer answers |
 
 ---
 

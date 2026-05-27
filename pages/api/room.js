@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { pickPair } from '../../lib/pickPair.js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -12,26 +13,10 @@ function randomRoomCode() {
   return code;
 }
 
-function getEventYear(e) {
-  if (e.date) return parseInt(e.date.split('-')[0], 10);
-  return e.year ?? 0;
-}
-
-function pickPair(events) {
-  let i = Math.floor(Math.random() * events.length);
-  let j = Math.floor(Math.random() * events.length);
-  let guard = 0;
-  while (j === i) {
-    j = Math.floor(Math.random() * events.length);
-    if (++guard > 1000) throw new Error('Stuck picking pair');
-  }
-  return [events[i], events[j]];
-}
-
 function applyFilters(events, filters) {
   if (!filters) return events;
   return events.filter((e) => {
-    const y = getEventYear(e);
+    const y = e.year_int ?? 0;
     if (filters.startYear !== null && filters.startYear !== undefined && y < filters.startYear) return false;
     if (filters.endYear !== null && filters.endYear !== undefined && y > filters.endYear) return false;
     if (filters.region && e.region !== filters.region) return false;
@@ -76,6 +61,48 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
+  if (action === 'restart') {
+    if (!roomCode || !playerId) return res.status(400).json({ error: 'Missing fields' });
+
+    const { data: existing } = await supabase.from('rooms').select('*').eq('code', roomCode.toLowerCase()).single();
+    if (!existing) return res.status(404).json({ error: 'Room not found' });
+
+    const ready = new Set(existing.ready_players || []);
+    ready.add(playerId);
+
+    const hostId = existing.host;
+    const bId = existing.player_b;
+    const bothReady = bId ? ready.size === 2 : ready.size === 1;
+
+    if (bothReady) {
+      const shownPairsSet = new Set();
+      const firstPair = pickPair(existing.events || [], shownPairsSet);
+      const scores = { [hostId]: 0 };
+      if (bId) scores[bId] = 0;
+
+      const updates = {
+        state: 'playing',
+        scores,
+        current_round: 1,
+        current_pair: firstPair,
+        shown_pairs: Array.from(shownPairsSet),
+        answered: {},
+        winner: null,
+        last_result: null,
+        next_round_at: null,
+        ready_players: [],
+      };
+
+      const { data: room, error } = await supabase.from('rooms').update(updates).eq('id', existing.id).select().single();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ room, restarted: true });
+    } else {
+      const { error: updErr } = await supabase.from('rooms').update({ ready_players: Array.from(ready) }).eq('id', existing.id);
+      if (updErr) return res.status(500).json({ error: updErr.message });
+      return res.status(200).json({ waiting: true });
+    }
+  }
+
   if (action === 'create') {
     const rounds = parseInt(total_rounds, 10) || 10;
     if (rounds < 5 || rounds > 50) {
@@ -83,7 +110,7 @@ export default async function handler(req, res) {
     }
 
     // Validate filters produce 25+ events
-    const { data: allEvents } = await supabase.from('events').select('id, short_name, date, year, description, countries, region');
+    const { data: allEvents } = await supabase.from('events').select('id, short_name, date, year, year_int, description, countries, region');
     if (!allEvents || allEvents.length < 25) {
       return res.status(500).json({ error: 'Not enough total events in database' });
     }
@@ -98,6 +125,8 @@ export default async function handler(req, res) {
     let room;
 
     while (!room && attempts < 10) {
+      const shownPairsSet = new Set();
+      const firstPair = pickPair(filtered, shownPairsSet);
       const { data, error } = await supabase
         .from('rooms')
         .insert({ 
@@ -106,7 +135,8 @@ export default async function handler(req, res) {
           state: 'lobby', 
           total_rounds: rounds,
           events: filtered,
-          current_pair: pickPair(filtered),
+          current_pair: firstPair,
+          shown_pairs: Array.from(shownPairsSet),
           scores: { [playerId]: 0 },
           streaks: { [playerId]: 0 },
           answered: {},
@@ -114,6 +144,7 @@ export default async function handler(req, res) {
           last_result: null,
           next_round_at: null,
           heartbeats: { [playerId]: new Date().toISOString() },
+          ready_players: [],
         })
         .select()
         .single();

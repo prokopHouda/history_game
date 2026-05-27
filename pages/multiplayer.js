@@ -38,6 +38,8 @@ export default function Multiplayer() {
     let heartbeatInterval = null;
     let disconnectCheckInterval = null;
     let opponentDisconnected = false;
+    let currentRenderedRound = null;
+    let pendingWinnerRoom = null; // avoid timer reset on non-round DB updates
     const translations = {}; // { [lang]: { [id]: { short_name, description, fun_fact } } }
     function getLang() { return sessionStorage.getItem('mp_lang') || 'en'; }
 
@@ -79,6 +81,8 @@ export default function Multiplayer() {
         youWon: '🏆 You Won!',
         youLost: '😅 You Lost!',
         tie: "🤝 It's a Tie!",
+        waitingOpp: 'Waiting for opponent...',
+        waitingRestart: 'Waiting for opponent...',
         playAgain: 'Play Again',
         winnerWin: [
           'History bows before your greatness!',
@@ -139,6 +143,7 @@ export default function Multiplayer() {
         youLost: '😅 Prohrál jsi!',
         tie: '🤝 Remíza!',
         playAgain: 'Hrát znovu',
+        waitingRestart: 'Čekání na soupeře...',
         winnerWin: [
           'Dějiny se klaní před tvou velikostí!',
           'Jsi pravý Chronomancer!',
@@ -198,6 +203,7 @@ export default function Multiplayer() {
         youLost: '😅 Hai perso!',
         tie: '🤝 Pareggio!',
         playAgain: 'Gioca ancora',
+        waitingRestart: 'In attesa del avversario...',
         winnerWin: [
           'La storia si inchina davanti alla tua grandezza!',
           'Sei il vero Chronomancer!',
@@ -351,10 +357,20 @@ export default function Multiplayer() {
     }
 
     async function createRoom() {
+      const btn = document.getElementById('btn-create');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.innerHTML = `<div style="display:inline-flex;align-items:center;gap:0.5rem;">
+        <div style="width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+        Creating...
+      </div>`;
+
       const rounds = parseInt(document.getElementById('roundsInput').value, 10) || 10;
       if (rounds < 5 || rounds > 50) {
         document.getElementById('mp-poolCounter').textContent = 'Rounds must be 5–50 ❌';
         document.getElementById('mp-poolCounter').style.color = '#f87171';
+        btn.disabled = false;
+        btn.textContent = originalText;
         return;
       }
 
@@ -362,6 +378,8 @@ export default function Multiplayer() {
       if (!valid) {
         document.getElementById('mp-poolCounter').textContent = `Need at least ${MIN_EVENTS} events (${count}) ❌`;
         document.getElementById('mp-poolCounter').style.color = '#f87171';
+        btn.disabled = false;
+        btn.textContent = originalText;
         return;
       }
 
@@ -375,19 +393,28 @@ export default function Multiplayer() {
         country: document.getElementById('mp-countryFilter').value,
       };
 
-      const res = await fetch('/api/room', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', playerId, total_rounds: rounds, filters, lang: myLang }),
-      });
-      const json = await res.json();
-      if (json.room) {
-        room = json.room;
-        showLobby(`Room code: ${room.code} — ${room.total_rounds} rounds`);
-        subscribeToRoom(room.code);
-      } else {
+      try {
+        const res = await fetch('/api/room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', playerId, total_rounds: rounds, filters, lang: myLang }),
+        });
+        const json = await res.json();
+        if (json.room) {
+          room = json.room;
+          showLobby(`Room code: ${room.code} — ${room.total_rounds} rounds`);
+          subscribeToRoom(room.code);
+        } else {
+          document.getElementById('mp-loading').classList.remove('hidden');
+          document.getElementById('mp-loading').textContent = json.error || 'Failed to create room';
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      } catch (err) {
         document.getElementById('mp-loading').classList.remove('hidden');
-        document.getElementById('mp-loading').textContent = json.error || 'Failed to create room';
+        document.getElementById('mp-loading').textContent = 'Network error. Please try again.';
+        btn.disabled = false;
+        btn.textContent = originalText;
       }
     }
 
@@ -424,25 +451,52 @@ export default function Multiplayer() {
           filter: `code=eq.${code}`,
         }, (payload) => {
           const newRoom = payload.new;
+          const oldRoom = room;
           room = newRoom;
 
           if (newRoom.state === 'playing') {
+            if (oldRoom?.state === 'finished') {
+              // Clean slate for a restarted game
+              lastShownResultRound = null;
+              pendingRaceScores = null;
+              suppressRaceTracker = false;
+              currentRenderedRound = null;
+              opponentDisconnected = false;
+              pendingWinnerRoom = null;
+              hideWinner();
+              const btn = document.getElementById('btn-play-again');
+              if (btn) { btn.disabled = false; btn.textContent = t('playAgain'); }
+            }
             showGame();
           }
 
           if (newRoom.state === 'finished') {
+            const lr = newRoom.last_result;
+            const resultRound = lr?.round || 0;
+            if (lr && resultRound > lastShownResultRound) {
+              // Last round result hasn't been shown yet — show it first.
+              pendingWinnerRoom = newRoom;
+              showRoundResult(newRoom);
+              suppressRaceTracker = true;
+              return;
+            }
             showWinner(newRoom);
+            return;
+          }
+
+          // Skip re-rendering if only metadata (e.g. heartbeats) changed —
+          // prevents "Načítání" flash every 10 seconds.
+          if (oldRoom &&
+              oldRoom.current_round === newRoom.current_round &&
+              oldRoom.current_pair?.[0]?.id === newRoom.current_pair?.[0]?.id &&
+              oldRoom.current_pair?.[1]?.id === newRoom.current_pair?.[1]?.id &&
+              JSON.stringify(oldRoom.answered) === JSON.stringify(newRoom.answered) &&
+              JSON.stringify(oldRoom.scores) === JSON.stringify(newRoom.scores)) {
             return;
           }
 
           // Always render current game state first so new round cards are ready underneath
           renderRoom();
-
-          // Show result overlay if there's a result for a round we haven't seen yet
-          if (newRoom.last_result) {
-            showRoundResult(newRoom);
-            suppressRaceTracker = true;
-          }
 
           // Show result overlay if there's a result for a round we haven't seen yet
           if (newRoom.last_result) {
@@ -494,6 +548,9 @@ export default function Multiplayer() {
     function showLobby(msg) {
       document.getElementById('mp-lobby').classList.add('hidden');
       document.getElementById('mp-waiting').classList.remove('hidden');
+      document.getElementById('mp-winner')?.classList.add('hidden');
+      document.getElementById('mp-result-overlay')?.classList.add('hidden');
+      document.getElementById('mp-disconnect')?.classList.add('hidden');
       document.getElementById('mp-waiting-msg').textContent = msg;
       // Start sending heartbeats once in a room context
       if (!heartbeatInterval) {
@@ -504,6 +561,9 @@ export default function Multiplayer() {
     function showGame() {
       document.getElementById('mp-lobby').classList.add('hidden');
       document.getElementById('mp-waiting').classList.add('hidden');
+      document.getElementById('mp-winner')?.classList.add('hidden');
+      document.getElementById('mp-result-overlay')?.classList.add('hidden');
+      document.getElementById('mp-disconnect')?.classList.add('hidden');
       document.getElementById('mp-game').classList.remove('hidden');
       // Ensure heartbeat sender is running for both players once in-game
       if (!heartbeatInterval) {
@@ -511,7 +571,12 @@ export default function Multiplayer() {
       }
     }
 
+    function hideWinner() {
+      document.getElementById('mp-winner')?.classList.add('hidden');
+    }
+
     function showWinner(roomData) {
+      if (!document.getElementById('mp-winner').classList.contains('hidden')) return;
       document.getElementById('mp-game').classList.add('hidden');
       document.getElementById('mp-winner').classList.remove('hidden');
 
@@ -665,6 +730,11 @@ export default function Multiplayer() {
         pendingRaceScores = null;
       }
       suppressRaceTracker = false;
+      if (pendingWinnerRoom) {
+        const finalRoom = pendingWinnerRoom;
+        pendingWinnerRoom = null;
+        showWinner(finalRoom);
+      }
     }
 
     async function renderRoom() {
@@ -733,45 +803,52 @@ export default function Multiplayer() {
       const ans = room.answered || {};
       const myAns = ans[playerId];
 
-      // Clear any existing countdown
-      if (countdownInterval) {
-        clearInterval(countdownInterval);
-        countdownInterval = null;
-      }
-      if (turnTimeoutId) {
-        clearTimeout(turnTimeoutId);
-        turnTimeoutId = null;
-      }
+      // Only reset timers when the round/pair actually changes — heartbeats should not reset the countdown
+      const pairIds = pair.map((e) => e?.id).join('-');
+      const roundFp = `${room.current_round || 0}-${pairIds}-${myAns ? 'answered' : 'open'}`;
+      const shouldResetTimers = roundFp !== currentRenderedRound;
 
-      if (myAns) {
-        document.getElementById('mp-status').textContent = t('waitingOpp');
-        document.getElementById('mp-cardA').classList.add('disabled');
-        document.getElementById('mp-cardB').classList.add('disabled');
-      } else {
-        const deadline = Date.now() + 45000;
-        const updateCountdown = () => {
-          const remaining = Math.ceil((deadline - Date.now()) / 1000);
-          if (remaining <= 0) {
-            document.getElementById('mp-status').textContent = t('waitingOpp');
-            document.getElementById('mp-cardA').classList.add('disabled');
-            document.getElementById('mp-cardB').classList.add('disabled');
-            clearInterval(countdownInterval);
-            countdownInterval = null;
-            return;
-          }
-          document.getElementById('mp-status').textContent = `${t('yourTurn')} (${remaining}s)`;
-        };
-        updateCountdown();
-        countdownInterval = setInterval(updateCountdown, 1000);
-        turnTimeoutId = setTimeout(() => {
-          // Safety: only auto-submit if we still haven't answered
-          const currentAns = room?.answered || {};
-          if (currentAns[playerId] === undefined) {
-            guess('timeout');
-          }
-        }, 45000);
-        document.getElementById('mp-cardA').classList.remove('disabled');
-        document.getElementById('mp-cardB').classList.remove('disabled');
+      if (shouldResetTimers) {
+        currentRenderedRound = roundFp;
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+        if (turnTimeoutId) {
+          clearTimeout(turnTimeoutId);
+          turnTimeoutId = null;
+        }
+
+        if (myAns) {
+          document.getElementById('mp-status').textContent = t('waitingOpp');
+          document.getElementById('mp-cardA').classList.add('disabled');
+          document.getElementById('mp-cardB').classList.add('disabled');
+        } else {
+          const deadline = Date.now() + 45000;
+          const updateCountdown = () => {
+            const remaining = Math.ceil((deadline - Date.now()) / 1000);
+            if (remaining <= 0) {
+              document.getElementById('mp-status').textContent = t('waitingOpp');
+              document.getElementById('mp-cardA').classList.add('disabled');
+              document.getElementById('mp-cardB').classList.add('disabled');
+              clearInterval(countdownInterval);
+              countdownInterval = null;
+              return;
+            }
+            document.getElementById('mp-status').textContent = `${t('yourTurn')} (${remaining}s)`;
+          };
+          updateCountdown();
+          countdownInterval = setInterval(updateCountdown, 1000);
+          turnTimeoutId = setTimeout(() => {
+            // Safety: only auto-submit if we still haven't answered
+            const currentAns = room?.answered || {};
+            if (currentAns[playerId] === undefined) {
+              guess('timeout');
+            }
+          }, 45000);
+          document.getElementById('mp-cardA').classList.remove('disabled');
+          document.getElementById('mp-cardB').classList.remove('disabled');
+        }
       }
     }
 
@@ -840,9 +917,41 @@ export default function Multiplayer() {
       }
     }
 
+    async function restartGame() {
+      if (!room || !room.code) return;
+      const btn = document.getElementById('btn-play-again');
+      btn.disabled = true;
+      btn.textContent = t('waitingRestart');
+      try {
+        const res = await fetch('/api/room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'restart', roomCode: room.code, playerId }),
+        });
+        const data = await res.json();
+        if (data.waiting) {
+          // Waiting for opponent — button already shows "Waiting..."
+          return;
+        }
+        if (data.restarted) {
+          // Both ready — Supabase realtime will push state: 'playing'
+          // The subscription handler will call showGame() and renderRoom().
+        }
+      } catch (err) {
+        console.error('Restart failed', err);
+        btn.disabled = false;
+        btn.textContent = t('playAgain');
+      }
+    }
+
     async function showDisconnectOverlay() {
       if (opponentDisconnected) return;
       opponentDisconnected = true;
+      // Unsubscribe from realtime so finished-room events don't overwrite us
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
       // Stop local timers
       if (turnTimeoutId) { clearTimeout(turnTimeoutId); turnTimeoutId = null; }
       if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
@@ -905,7 +1014,8 @@ export default function Multiplayer() {
     document.getElementById('btn-join')?.addEventListener('click', joinRoom);
     document.getElementById('mp-cardA')?.addEventListener('click', () => guess('A'));
     document.getElementById('mp-cardB')?.addEventListener('click', () => guess('B'));
-    document.getElementById('btn-play-again')?.addEventListener('click', () => window.location.reload());
+    document.getElementById('btn-play-again')?.addEventListener('click', restartGame);
+    document.getElementById('btn-new-game')?.addEventListener('click', () => window.location.href = '/multiplayer');
     document.getElementById('btn-back-lobby')?.addEventListener('click', () => window.location.reload());
     document.getElementById('mp-langSelect')?.addEventListener('change', () => {
       sessionStorage.setItem('mp_lang', document.getElementById('mp-langSelect').value);
@@ -1091,6 +1201,7 @@ export default function Multiplayer() {
           <div id="mp-winner-scores" style={{ fontSize: '2rem', fontWeight: 800, color: '#fbbf24', marginBottom: '1rem' }} />
           
           <button className="btn-primary" id="btn-play-again">Play Again</button>
+          <button className="btn-secondary" id="btn-new-game">New Game</button>
         </div>
       </div>
     </div>

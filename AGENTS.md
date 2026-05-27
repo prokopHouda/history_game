@@ -18,17 +18,18 @@
 - Players create/join rooms via `POST /api/room` (3-letter room code)
 - Room state stored in `rooms` table with realtime enabled via `postgres_changes`
 - Client subscribes to `supabase.channel("room:{code}")` for instant sync
-- Both players answer individually; when both answered, system auto-generates next pair via `pickPair` (reusing existing event logic)
+- Both players answer individually; when both answered, system auto-generates next pair via `pickPair` (proximity-weighted + deduplication)
 - Win condition: streak of 3 (simplified multiplayer version)
 - Realtime WebSocket used instead of polling; free tier supports 200 concurrent connections
 
 ## Data model (Supabase)
 - **`events` table**: `id, short_name, date, year, description, countries, region`
 - **`event_translations` table**: `event_id, lang, short_name, description` — populated lazily via `/api/translate`
-- **`rooms` table** (multiplayer): `id, code, host, player_b, state, events, current_pair, scores, streaks, current_round, answered, winner, created_at/updated_at`
+- **`rooms` table** (multiplayer): `id, code, host, player_b, state, events, current_pair, scores, streaks, current_round, answered, winner, shown_pairs, heartbeats, created_at/updated_at`
   - Migration: `database/00_create_rooms.sql` — must be run manually in Supabase SQL Editor
+  - `shown_pairs`: JSONB array of canonical pair keys (`"a-b"`) preventing repeat questions
+  - `heartbeats`: JSONB tracking last-seen timestamps per player for disconnect detection
   - Realtime enabled via: `alter publication supabase_realtime add table rooms;`
-- Game requires at least 25 matching events to start
 
 ## Environment variables
 | Variable | Scope | Notes |

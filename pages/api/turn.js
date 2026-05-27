@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { pickPair } from '../../lib/pickPair.js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -14,17 +15,6 @@ function getTime(e) {
   if (e.date) return Date.parse(e.date + 'T00:00:00Z');
   const y = String(e.year).padStart(4, '0');
   return Date.parse(`${y}-01-01T00:00:00Z`);
-}
-
-function pickPair(events) {
-  let i = Math.floor(Math.random() * events.length);
-  let j = Math.floor(Math.random() * events.length);
-  let guard = 0;
-  while (j === i) {
-    j = Math.floor(Math.random() * events.length);
-    if (++guard > 1000) throw new Error('Stuck picking pair');
-  }
-  return [events[i], events[j]];
 }
 
 function yearDiff(years) {
@@ -104,6 +94,8 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
   let lastResult = null;
   let nextRoundAt = null;
 
+  let shownPairsToSave = null;
+
   if (allAnswered) {
     // Only update scores when BOTH players have answered, so both clients
     // see the score change coincide with the result overlay.
@@ -130,7 +122,9 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
     round += 1;
     const events = room.events || [];
     if (events.length >= 2) {
-      nextPair = pickPair(events);
+      const shownPairsSet = new Set(room.shown_pairs || []);
+      nextPair = pickPair(events, shownPairsSet);
+      shownPairsToSave = Array.from(shownPairsSet);
     }
 
     // Build result summary for the round that just ended
@@ -164,6 +158,7 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
     winner,
     last_result: lastResult,
     next_round_at: nextRoundAt,
+    ...(shownPairsToSave ? { shown_pairs: shownPairsToSave } : {}),
   };
   if (allAnswered) {
     updateData.answered = {};

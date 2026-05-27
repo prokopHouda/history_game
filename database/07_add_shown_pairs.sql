@@ -1,0 +1,1 @@
+ALTER TABLE rooms ADD COLUMN IF NOT EXISTS shown_pairs JSONB DEFAULT '[]';

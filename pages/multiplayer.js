@@ -562,7 +562,6 @@ export default function Multiplayer() {
       document.getElementById('mp-lobby').classList.add('hidden');
       document.getElementById('mp-waiting').classList.add('hidden');
       document.getElementById('mp-winner')?.classList.add('hidden');
-      document.getElementById('mp-result-overlay')?.classList.add('hidden');
       document.getElementById('mp-disconnect')?.classList.add('hidden');
       document.getElementById('mp-game').classList.remove('hidden');
       // Ensure heartbeat sender is running for both players once in-game
@@ -716,7 +715,7 @@ export default function Multiplayer() {
       // Hide locally when server says next round starts, or after default 3.5s
       const nextRoundAt = roomData.next_round_at ? new Date(roomData.next_round_at) : null;
       const now = new Date();
-      const delay = nextRoundAt ? Math.max(500, nextRoundAt.getTime() - now.getTime()) : 3500;
+      const delay = nextRoundAt ? Math.max(3000, nextRoundAt.getTime() - now.getTime()) : 3500;
 
       setTimeout(() => {
         hideRoundResult();

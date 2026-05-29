@@ -328,24 +328,42 @@ button:active { transform: scale(0.98); }
 .lang-nav {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 0.5rem;
   margin-bottom: 1.25rem;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  backdrop-filter: blur(8px);
+}
+.lang-nav::before {
+  content: '🌐';
+  font-size: 0.85rem;
+  margin-right: 0.25rem;
+  opacity: 0.8;
 }
 .lang-btn {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  color: #cbd5e1;
-  padding: 0.35rem 0.8rem;
+  display: inline-block;
+  background: rgba(255,255,255,0.1);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  color: #e2e8f0;
+  padding: 0.35rem 0.9rem;
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
   box-shadow: none;
+  line-height: 1.2;
 }
 .lang-btn:hover {
-  background: rgba(255,255,255,0.14);
-  border-color: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.45);
+  color: #fff;
   transform: translateY(-1px);
 }
 .lang-btn.active {
@@ -353,6 +371,7 @@ button:active { transform: scale(0.98); }
   border-color: transparent;
   color: #fff;
   pointer-events: none;
+  box-shadow: 0 2px 10px rgba(99,102,241,0.35);
 }
 
 .hidden { display: none !important; }

@@ -112,7 +112,8 @@ export default function Multiplayer() {
         youLeadBy: 'You lead by {diff} points',
         oppLeadsBy: 'Opponent leads by {diff} points',
         tiedRace: 'Tied — every point counts!',
-        newGame: 'New Game',
+        restartGame: 'Restart game',
+        returnToLobby: 'Return to lobby',
         missingEnv: 'Missing Supabase env vars',
         sending: 'Sending...',
         networkError: 'Network error. Please try again.',
@@ -185,7 +186,8 @@ export default function Multiplayer() {
         youLeadBy: 'Vedeš o {diff} bodů',
         oppLeadsBy: 'Soupeř vede o {diff} bodů',
         tiedRace: 'Remíza — každý bod se počítá!',
-        newGame: 'Nová hra',
+        restartGame: 'Restart hry',
+        returnToLobby: 'Zpět do lobby',
         missingEnv: 'Chybí Supabase proměnné prostředí',
         sending: 'Odesílání...',
         networkError: 'Chyba sítě. Zkus to znovu.',
@@ -264,7 +266,8 @@ export default function Multiplayer() {
         youLeadBy: 'Stai in testa di {diff} punti',
         oppLeadsBy: 'L\'avversario è in testa di {diff} punti',
         tiedRace: 'Pareggio — ogni punto conta!',
-        newGame: 'Nuova partita',
+        restartGame: 'Ricomincia partita',
+        returnToLobby: 'Torna alla lobby',
         missingEnv: 'Variabili d\'ambiente Supabase mancanti',
         sending: 'Invio in corso...',
         networkError: 'Errore di rete. Riprova.',
@@ -312,9 +315,9 @@ export default function Multiplayer() {
       document.getElementById('mp-race-me-label').textContent = t('you');
       document.getElementById('mp-race-opp-label').textContent = t('opponent');
       document.getElementById('mp-next-round').textContent = t('nextRound');
-      document.getElementById('btn-play-again').textContent = t('playAgain');
-      document.getElementById('btn-back-lobby').textContent = t('backToLobby');
-      document.getElementById('btn-new-game').textContent = t('newGame');
+      document.getElementById('btn-play-again').textContent = t('restartGame');
+      document.getElementById('btn-back-lobby').textContent = t('returnToLobby');
+      document.getElementById('btn-new-game').textContent = t('returnToLobby');
       document.getElementById('mp-startYear').placeholder = t('placeholderStartYear');
       document.getElementById('mp-endYear').placeholder = t('placeholderEndYear');
       document.getElementById('joinCode').placeholder = t('placeholderRoomCode');
@@ -531,7 +534,7 @@ export default function Multiplayer() {
               pendingWinnerRoom = null;
               hideWinner();
               const btn = document.getElementById('btn-play-again');
-              if (btn) { btn.disabled = false; btn.textContent = t('playAgain'); }
+              if (btn) { btn.disabled = false; btn.textContent = t('restartGame'); }
             }
             showGame();
           }
@@ -1048,7 +1051,7 @@ export default function Multiplayer() {
       } catch (err) {
         console.error('Restart failed', err);
         btn.disabled = false;
-        btn.textContent = t('playAgain');
+        btn.textContent = t('restartGame');
       }
     }
 
@@ -1311,8 +1314,10 @@ export default function Multiplayer() {
           <p id="mp-winner-msg" style={{ fontSize: '1.1rem', color: '#e2e8f0', margin: '1rem 0' }} />
           <div id="mp-winner-scores" style={{ fontSize: '2rem', fontWeight: 800, color: '#fbbf24', marginBottom: '1rem' }} />
           
-          <button className="btn-primary" id="btn-play-again">Play Again</button>
-          <button className="btn-secondary" id="btn-new-game">New Game</button>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem' }}>
+            <button className="btn-primary" id="btn-play-again">Restart game</button>
+            <button className="btn-secondary" id="btn-new-game">Return to lobby</button>
+          </div>
         </div>
       </div>
     </div>

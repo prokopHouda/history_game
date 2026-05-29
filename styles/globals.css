@@ -330,48 +330,52 @@ button:active { transform: scale(0.98); }
   justify-content: center;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1.25rem;
-  background: rgba(0,0,0,0.35);
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 12px;
-  padding: 0.5rem 0.75rem;
+  margin-bottom: 1.5rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 2px solid rgba(129, 140, 248, 0.35);
+  border-radius: 14px;
+  padding: 0.6rem 1rem;
   width: fit-content;
   margin-left: auto;
   margin-right: auto;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 .lang-nav::before {
   content: '🌐';
-  font-size: 0.85rem;
-  margin-right: 0.25rem;
-  opacity: 0.8;
+  font-size: 0.9rem;
+  margin-right: 0.35rem;
+  opacity: 0.9;
 }
 .lang-btn {
   display: inline-block;
-  background: rgba(255,255,255,0.1);
-  border: 1.5px solid rgba(255,255,255,0.25);
-  color: #e2e8f0;
-  padding: 0.35rem 0.9rem;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.35);
+  color: #f1f5f9;
+  padding: 0.4rem 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
-  box-shadow: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s, box-shadow 0.15s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   line-height: 1.2;
+  min-width: 44px;
+  text-align: center;
 }
 .lang-btn:hover {
-  background: rgba(255,255,255,0.2);
-  border-color: rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.6);
   color: #fff;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.25);
 }
 .lang-btn.active {
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   border-color: transparent;
   color: #fff;
   pointer-events: none;
-  box-shadow: 0 2px 10px rgba(99,102,241,0.35);
+  box-shadow: 0 4px 16px rgba(99,102,241,0.4);
 }
 
 .hidden { display: none !important; }

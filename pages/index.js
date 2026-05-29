@@ -18,6 +18,7 @@ export default function Home() {
     let events = [];
     let a, b, earlierId;
     let score = 0, streak = 0, locked = false;
+    let lastResult = null;
     let transCache = {};
 
     const MILESTONES = {
@@ -174,6 +175,42 @@ export default function Home() {
 
     function t(key) {
       return UI[lang()]?.[key] || UI.en[key];
+    }
+
+    function updateLangNav() {
+      const current = lang();
+      document.querySelectorAll('.lang-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.lang === current);
+      });
+    }
+
+    async function changeLang(l) {
+      if (l === lang()) return;
+      localStorage.setItem('gameLang', l);
+      renderLabels();
+      updateLangNav();
+      if (a && b) {
+        const origA = events.find((e) => e.id === a.id) || a;
+        const origB = events.find((e) => e.id === b.id) || b;
+        const [ta, tb] = await maybeTranslate([origA, origB]);
+        if (lang() !== l) return;
+        a = ta; b = tb;
+        document.getElementById('nameA').textContent = a.short_name;
+        document.getElementById('descA').textContent = a.description;
+        document.getElementById('metaA').textContent = getLabel(a);
+        document.getElementById('nameB').textContent = b.short_name;
+        document.getElementById('descB').textContent = b.description;
+        document.getElementById('metaB').textContent = getLabel(b);
+        if (lastResult) {
+          lastResult.earlier = earlierId === a.id ? a : b;
+          lastResult.later = earlierId === a.id ? b : a;
+          const { earlier, later, isCorrect } = lastResult;
+          const fb = isCorrect
+            ? `${t('correct')} ${earlier.short_name}`
+            : `${t('wrong')} ${earlier.short_name} (${getLabel(earlier)}) ${t('earlierThan')} ${later.short_name} (${getLabel(later)}).`;
+          document.getElementById('feedback').textContent = fb;
+        }
+      }
     }
 
     function renderLabels() {
@@ -504,6 +541,8 @@ export default function Home() {
       document.getElementById('metaA').style.display = 'block';
       document.getElementById('metaB').style.display = 'block';
 
+      lastResult = { earlier, later, isCorrect };
+
       document.getElementById('card' + (earlier === a ? 'A' : 'B')).classList.add('correct');
       if (!isCorrect) {
         document.getElementById('card' + side).classList.add('wrong');
@@ -536,6 +575,7 @@ export default function Home() {
     }
 
     async function nextRound() {
+      lastResult = null;
       showLoader();
       const pair = pickPair();
       const final = await maybeTranslate(pair);
@@ -545,6 +585,7 @@ export default function Home() {
     }
 
     function openSettings() {
+      document.getElementById('langSelect').value = lang();
       renderLabels();
       updatePoolCounter();
       document.getElementById('game').classList.add('hidden');
@@ -562,6 +603,10 @@ export default function Home() {
       openSettings();
     };
 
+    document.querySelectorAll('.lang-btn').forEach((btn) => {
+      btn.addEventListener('click', () => changeLang(btn.dataset.lang));
+    });
+
     document.getElementById('startBtn')?.addEventListener('click', onStart);
     document.getElementById('cardA')?.addEventListener('click', onGuessA);
     document.getElementById('cardB')?.addEventListener('click', onGuessB);
@@ -576,6 +621,7 @@ export default function Home() {
     });
 
     async function init() {
+      updateLangNav();
       renderLabels();
       try {
         const { data, error } = await supabase
@@ -668,6 +714,12 @@ export default function Home() {
       </div>
 
       <div id="game" className="hidden">
+        <nav className="lang-nav">
+          <button data-lang="en" className="lang-btn active">EN</button>
+          <button data-lang="cs" className="lang-btn">CS</button>
+          <button data-lang="it" className="lang-btn">IT</button>
+        </nav>
+
         <div className="hud">
           <div className="badge"><span className="label" id="labelScore">Score</span> <span id="score">0</span></div>
           <div className="badge"><span className="label" id="labelStreak">Streak</span> <span id="streak">0</span></div>

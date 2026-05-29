@@ -323,6 +323,38 @@ button:active { transform: scale(0.98); }
   color: #94a3b8;
   font-size: 1rem;
 }
+
+/* ─── Language Nav in-game ─── */
+.lang-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.lang-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #cbd5e1;
+  padding: 0.35rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+  box-shadow: none;
+}
+.lang-btn:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.25);
+  transform: translateY(-1px);
+}
+.lang-btn.active {
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  border-color: transparent;
+  color: #fff;
+  pointer-events: none;
+}
+
 .hidden { display: none !important; }
 
 /* Celebration */

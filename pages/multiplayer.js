@@ -40,8 +40,45 @@ export default function Multiplayer() {
     let opponentDisconnected = false;
     let currentRenderedRound = null;
     let pendingWinnerRoom = null; // avoid timer reset on non-round DB updates
-    const translations = {}; // { [lang]: { [id]: { short_name, description, fun_fact } } }
+    const translations = {};
     function getLang() { return sessionStorage.getItem('mp_lang') || 'en'; }
+    function updateLangNav() {
+      const current = getLang();
+      document.querySelectorAll('#mp-game .lang-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.lang === current);
+      });
+    }
+    function refreshGameText() {
+      if (!room || !room.current_pair || room.current_pair.length < 2) return;
+      const [a, b] = room.current_pair;
+      const ta = getText(a);
+      const tb = getText(b);
+      document.getElementById('mp-nameA').textContent = ta.short_name;
+      document.getElementById('mp-descA').textContent = ta.description;
+      document.getElementById('mp-nameB').textContent = tb.short_name;
+      document.getElementById('mp-descB').textContent = tb.description;
+      const round = room.current_round || 1;
+      const total = room.total_rounds || 10;
+      document.getElementById('mp-round').textContent = `${t('round')} ${round} / ${total}`;
+      const oppId = room.host === playerId ? room.player_b : room.host;
+      updateRaceTracker((room.scores || {})[playerId] || 0, (room.scores || {})[oppId] || 0);
+    }
+    async function changeLang(l) {
+      if (l === getLang()) return;
+      sessionStorage.setItem('mp_lang', l);
+      const lobbySelect = document.getElementById('mp-langSelect');
+      if (lobbySelect) lobbySelect.value = l;
+      updateLangNav();
+      updateUIText();
+      if (!document.getElementById('mp-waiting').classList.contains('hidden') && room) {
+        document.getElementById('mp-waiting-msg').textContent = tf('roomInfo', { code: room.code, rounds: room.total_rounds });
+      }
+      if (room && room.current_pair && room.current_pair.length === 2) {
+        await ensureTranslated(room.current_pair);
+        refreshGameText();
+      }
+    }
+    const onLangChange = (e) => changeLang(e.currentTarget.dataset.lang);
 
     const uiText = {
       en: {
@@ -1129,8 +1166,11 @@ export default function Multiplayer() {
     document.getElementById('btn-new-game')?.addEventListener('click', () => window.location.href = '/multiplayer');
     document.getElementById('btn-back-lobby')?.addEventListener('click', () => window.location.reload());
     document.getElementById('mp-langSelect')?.addEventListener('change', () => {
-      sessionStorage.setItem('mp_lang', document.getElementById('mp-langSelect').value);
-      updateUIText();
+      changeLang(document.getElementById('mp-langSelect').value);
+    });
+
+    document.querySelectorAll('#mp-game .lang-btn').forEach((btn) => {
+      btn.addEventListener('click', () => changeLang(btn.dataset.lang));
     });
 
     return () => {
@@ -1215,6 +1255,12 @@ export default function Multiplayer() {
       </div>
 
       <div id="mp-game" className="hidden">
+        <nav className="lang-nav">
+          <button data-lang="en" className="lang-btn active">EN</button>
+          <button data-lang="cs" className="lang-btn">CS</button>
+          <button data-lang="it" className="lang-btn">IT</button>
+        </nav>
+
         <div className="hud">
           <div className="badge">
             <span className="label" id="mp-game-you-label">You</span> <span id="mp-my-score">0</span>

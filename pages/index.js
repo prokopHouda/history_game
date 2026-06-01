@@ -421,7 +421,7 @@ export default function Home() {
       return pair.map((e) => {
         const tr = transCache[`${e.id}-${l}`];
         if (!tr) return e;
-        return { ...e, short_name: tr.short_name, description: tr.description };
+        return { ...e, short_name: tr.short_name || e.short_name, description: tr.description || e.description };
       });
     }
 

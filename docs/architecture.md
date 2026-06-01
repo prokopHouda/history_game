@@ -291,7 +291,7 @@ pages/
 ├── api/
 │   ├── room.js           # create / join / clear-result
 │   ├── turn.js           # submit answer + calculate score
-│   └── translate.js      # DeepL proxy + Supabase cache
+│   └── translate.js      # DeepL proxy + Supabase cache. Fetches short_name with description context, description/fun_fact plain.
 ```
 
 ---

@@ -1,8 +1,7 @@
 -- Clear stale translations to force re-translation with new context-aware logic.
--- IMPORTANT: DELETE rows rather than UPDATE short_name=NULL.
--- Setting short_name=NULL leaves rows in the table; the API would then
--- return null short_names and the frontend would fall back to English.
 -- Deleting rows makes them true cache misses so fresh translations are fetched.
--- Run this for each non-English language you want to clear:
+DELETE FROM event_translations WHERE lang != 'en';
+
+-- If you ever need to clear only one language:
 -- DELETE FROM event_translations WHERE lang = 'cs';
 -- DELETE FROM event_translations WHERE lang = 'it';

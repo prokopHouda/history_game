@@ -39,6 +39,8 @@ export default function Multiplayer() {
     let roomClosed = false;
     let currentRenderedRound = null;
     let pendingWinnerRoom = null;
+    let nicknameDirty = false;
+    let pendingColor = null;
     const translations = {};
 
     const DEFAULT_COLORS = [
@@ -379,29 +381,40 @@ export default function Multiplayer() {
         listEl.appendChild(div);
       });
 
-      // Profile editor — only update if user is not currently typing
+      // Profile editor — respect user edits while typing
       const me = getMyPlayer();
       const nicknameInput = document.getElementById('mp-nickname-input');
-      if (me && nicknameInput && document.activeElement !== nicknameInput) {
-        nicknameInput.value = me.nickname || '';
+      if (me && nicknameInput) {
+        if (!nicknameDirty) {
+          nicknameInput.value = me.nickname || '';
+        }
+        // Track when user starts typing so we don't overwrite
+        nicknameInput.oninput = () => { nicknameDirty = true; };
       }
 
-      // Color picker
+      // Color picker — rebuild every render so taken colors reflect current state
       const colorPicker = document.getElementById('mp-color-picker');
-      if (colorPicker && colorPicker.children.length === 0) {
+      const takenColors = new Set((room.players || []).map((p) => p.color).filter(Boolean));
+      if (colorPicker) {
+        colorPicker.innerHTML = '';
         DEFAULT_COLORS.forEach((c) => {
+          const isTaken = takenColors.has(c) && c !== (pendingColor || me?.color);
+          const isSelected = c === (pendingColor || me?.color);
           const btn = document.createElement('button');
           btn.style.cssText = `
-            width:28px; height:28px; border-radius:50%; border:2px solid transparent;
-            background:${c}; cursor:pointer; padding:0; margin:2px;
+            width:28px; height:28px; border-radius:50%;
+            border: ${isSelected ? '2px solid #fff' : '2px solid transparent'};
+            background:${c}; padding:0; margin:2px;
+            cursor: ${isTaken ? 'not-allowed' : 'pointer'};
+            opacity: ${isTaken ? '0.3' : '1'};
+            transition: opacity 0.15s;
           `;
-          btn.addEventListener('click', () => {
-            document.querySelectorAll('#mp-color-picker button').forEach((b) => {
-              b.style.borderColor = 'transparent';
+          if (!isTaken) {
+            btn.addEventListener('click', () => {
+              pendingColor = c;
+              renderWaitingScreen(); // re-render to lock taken colors
             });
-            btn.style.borderColor = '#fff';
-            btn.dataset.selected = c;
-          });
+          }
           colorPicker.appendChild(btn);
         });
       }
@@ -424,8 +437,8 @@ export default function Multiplayer() {
     async function saveProfile() {
       if (!room || !room.code) return;
       const nickname = document.getElementById('mp-nickname-input').value.trim().slice(0, 15);
-      const selectedColorBtn = document.querySelector('#mp-color-picker button[style*="border-color: rgb(255, 255, 255)"], #mp-color-picker button[style*="border-color: #fff"]');
-      const color = selectedColorBtn?.dataset.selected || getMyPlayer()?.color;
+      const color = pendingColor || getMyPlayer()?.color;
+      pendingColor = null; // reset after save
       try {
         await fetch('/api/room', {
           method: 'POST',

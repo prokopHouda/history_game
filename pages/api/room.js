@@ -102,7 +102,8 @@ export default async function handler(req, res) {
         return;
       }
       const lastBeat = hb[p.id] ? new Date(hb[p.id]).getTime() : null;
-      const isAlive = lastBeat ? (now - lastBeat) < 35000 : false;
+      // If a player has no heartbeat entry yet (e.g. just joined), assume alive
+      const isAlive = lastBeat ? (now - lastBeat) < 35000 : true;
       aliveMap[p.id] = isAlive;
       if (p.isHost && !isAlive) hostAlive = false;
     });

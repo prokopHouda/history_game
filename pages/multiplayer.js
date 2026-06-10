@@ -338,10 +338,11 @@ export default function Multiplayer() {
 
     function renderWaitingScreen() {
       if (!room) return;
-      document.getElementById('mp-room-info').textContent = tf('playersConnected', {
+      const codeDisplay = room.code ? room.code.toUpperCase() : '—';
+      document.getElementById('mp-room-info').textContent = `Room: ${codeDisplay} — ${tf('playersConnected', {
         count: room.players?.length || 1,
         max: room.max_players || 10,
-      });
+      })}`;
 
       const listEl = document.getElementById('mp-players-list');
       listEl.innerHTML = '';
@@ -378,10 +379,10 @@ export default function Multiplayer() {
         listEl.appendChild(div);
       });
 
-      // Profile editor
+      // Profile editor — only update if user is not currently typing
       const me = getMyPlayer();
       const nicknameInput = document.getElementById('mp-nickname-input');
-      if (me && nicknameInput && nicknameInput.value !== me.nickname) {
+      if (me && nicknameInput && document.activeElement !== nicknameInput) {
         nicknameInput.value = me.nickname || '';
       }
 

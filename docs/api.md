@@ -6,11 +6,11 @@ Base URL: `https://history-game.vercel.app/api` *(update with your actual deploy
 
 ## `/api/room`
 
-Handles room lifecycle: creation, joining, restarting, and heartbeats.
+Handles room lifecycle: creation, joining, profile updates, starting, restarting, leaving, and heartbeats.
 
 ### `POST /api/room` — Create Room
 
-Create a new multiplayer room.
+Create a new multiplayer room. Host is automatically added to the `players` array.
 
 **Request body:**
 ```json
@@ -23,7 +23,9 @@ Create a new multiplayer room.
     "endYear": 2000,
     "region": "Europe",
     "country": "CZ"
-  }
+  },
+  "nickname": "Alice",
+  "color": "#ef4444"
 }
 ```
 
@@ -33,12 +35,13 @@ Create a new multiplayer room.
   "room": {
     "id": 1,
     "code": "xyz",
-    "host": "abc123",
-    "player_b": null,
     "state": "lobby",
     "total_rounds": 10,
     "current_round": 1,
-    "scores": { "abc123": 0 },
+    "scores": {},
+    "players": [
+      { "id": "abc123", "nickname": "Alice", "color": "#ef4444", "isHost": true }
+    ],
     "current_pair": [...],
     "shown_pairs": [],
     "heartbeats": { "abc123": "2026-05-27T12:00:00.000Z" }
@@ -46,16 +49,20 @@ Create a new multiplayer room.
 }
 ```
 
+---
+
 ### `POST /api/room` — Join Room
 
-Join an existing room by 3-letter code.
+Join an existing room by 3-letter code. Rejected if game is in progress or room is full (10 players).
 
 **Request body:**
 ```json
 {
   "action": "join",
   "roomCode": "xyz",
-  "playerId": "def456"
+  "playerId": "def456",
+  "nickname": "Bob",
+  "color": "#3b82f6"
 }
 ```
 
@@ -65,20 +72,74 @@ Join an existing room by 3-letter code.
   "room": {
     "id": 1,
     "code": "xyz",
-    "host": "abc123",
-    "player_b": "def456",
-    "state": "playing",
+    "state": "lobby",
     "total_rounds": 10,
     "current_round": 1,
     "scores": { "abc123": 0, "def456": 0 },
+    "players": [
+      { "id": "abc123", "nickname": "Alice", "color": "#ef4444", "isHost": true },
+      { "id": "def456", "nickname": "Bob", "color": "#3b82f6", "isHost": false }
+    ],
     "current_pair": [...]
   }
 }
 ```
 
-### `POST /api/room` — Restart Room
+---
 
-Signal readiness to play again. When both players are ready, the room resets.
+### `POST /api/room` — Update Profile
+
+Update your nickname and/or color while in the waiting room.
+
+**Request body:**
+```json
+{
+  "action": "update-profile",
+  "roomCode": "xyz",
+  "playerId": "def456",
+  "nickname": "Bobby",
+  "color": "#22c55e"
+}
+```
+
+**Response:**
+```json
+{ "ok": true }
+```
+
+---
+
+### `POST /api/room` — Start Game
+
+Host-only action. Starts the game when there are at least 2 players in the room.
+
+**Request body:**
+```json
+{
+  "action": "start",
+  "roomCode": "xyz",
+  "playerId": "abc123"
+}
+```
+
+**Response:**
+```json
+{
+  "room": {
+    "state": "playing",
+    "scores": { "abc123": 0, "def456": 0 },
+    "current_round": 1,
+    "current_pair": [...],
+    "round_started_at": "2026-05-27T12:00:00.000Z"
+  }
+}
+```
+
+---
+
+### `POST /api/room` — Restart Room (Play Again)
+
+Signal readiness to play again. When all players are ready, the room resets to `lobby` state.
 
 **Request body:**
 ```json
@@ -97,10 +158,37 @@ Signal readiness to play again. When both players are ready, the room resets.
 **Response (restarted):**
 ```json
 {
-  "room": { ... },
+  "room": { "state": "lobby", ... },
   "restarted": true
 }
 ```
+
+---
+
+### `POST /api/room` — Leave Room
+
+Remove yourself from the room. If the host leaves while in lobby, the room is destroyed.
+
+**Request body:**
+```json
+{
+  "action": "leave",
+  "roomCode": "xyz",
+  "playerId": "abc123"
+}
+```
+
+**Response (host left in lobby):**
+```json
+{ "roomClosed": true }
+```
+
+**Response (normal leave):**
+```json
+{ "ok": true }
+```
+
+---
 
 ### `POST /api/room` — Heartbeat
 
@@ -120,9 +208,11 @@ Send a keep-alive ping so the server knows the player is still connected.
 { "ok": true }
 ```
 
+---
+
 ### `POST /api/room` — Check Heartbeat
 
-Check whether the opponent is still alive (last heartbeat < 35 seconds ago).
+Check whether other players are still alive. If the host is disconnected in lobby, returns `roomClosed: true`.
 
 **Request body:**
 ```json
@@ -135,7 +225,14 @@ Check whether the opponent is still alive (last heartbeat < 35 seconds ago).
 
 **Response:**
 ```json
-{ "alive": true }
+{
+  "alive": {
+    "abc123": true,
+    "def456": true,
+    "ghi789": false
+  },
+  "roomClosed": false
+}
 ```
 
 ---
@@ -159,7 +256,7 @@ Submit which event the player thinks occurred earlier.
 
 `choice` can be `"A"`, `"B"`, or `"timeout"` (if the 45s timer expires).
 
-**Response (waiting for opponent):**
+**Response (waiting for others):**
 ```json
 {
   "isCorrect": true,
@@ -170,14 +267,14 @@ Submit which event the player thinks occurred earlier.
 }
 ```
 
-**Response (both answered — returned to second submitter):**
+**Response (all answered — returned to last submitter):**
 ```json
 {
   "isCorrect": true,
   "points": 2,
   "earlier": { "id": 5, "short_name": "..." },
   "later": { "id": 8, "short_name": "..." },
-  "scores": { "abc123": 2, "def456": 0 },
+  "scores": { "abc123": 2, "def456": 0, "ghi789": 2 },
   "allAnswered": true,
   "round": 2,
   "totalRounds": 10,
@@ -185,11 +282,13 @@ Submit which event the player thinks occurred earlier.
 }
 ```
 
+**Server-side deadline:** If 45 seconds pass since `round_started_at` and not all active players have answered, the server auto-marks missing players as `timedOut` (0 points) and advances the round.
+
 ---
 
 ## `/api/finish`
 
-Forces the game to finish and declares a winner.
+Forces the game to finish and returns full standings.
 
 ### `POST /api/finish`
 
@@ -205,11 +304,11 @@ Forces the game to finish and declares a winner.
 ```json
 {
   "ok": true,
-  "winner": {
-    "id": "abc123",
-    "score": 15,
-    "badge": "🏆"
-  }
+  "winner": [
+    { "id": "abc123", "nickname": "Alice", "color": "#ef4444", "score": 15 },
+    { "id": "ghi789", "nickname": "Charlie", "color": "#22c55e", "score": 12 },
+    { "id": "def456", "nickname": "Bob", "color": "#3b82f6", "score": 8 }
+  ]
 }
 ```
 
@@ -255,7 +354,7 @@ All endpoints return errors in this format:
 
 HTTP status codes:
 - `400` — Bad request (missing fields, invalid input)
-- `403` — Forbidden (room full, player not in room)
+- `403` — Forbidden (room full, player not in room, only host can start)
 - `404` — Room or resource not found
 - `405` — Method not allowed
 - `409` — Conflict (already answered)

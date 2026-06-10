@@ -31,23 +31,31 @@ export default function Multiplayer() {
     let allEvents = [];
     const MIN_EVENTS = 25;
     let lastShownResultRound = null;
-    let pendingRaceScores = null;
     let suppressRaceTracker = false;
     let turnTimeoutId = null;
     let countdownInterval = null;
     let heartbeatInterval = null;
     let disconnectCheckInterval = null;
-    let opponentDisconnected = false;
+    let roomClosed = false;
     let currentRenderedRound = null;
-    let pendingWinnerRoom = null; // avoid timer reset on non-round DB updates
+    let pendingWinnerRoom = null;
     const translations = {};
+
+    const DEFAULT_COLORS = [
+      '#ef4444', '#3b82f6', '#22c55e', '#eab308',
+      '#a855f7', '#f97316', '#ec4899', '#14b8a6',
+      '#84cc16', '#6366f1',
+    ];
+
     function getLang() { return sessionStorage.getItem('mp_lang') || 'en'; }
+
     function updateLangNav() {
       const current = getLang();
       document.querySelectorAll('#mp-game .lang-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.lang === current);
       });
     }
+
     function refreshGameText() {
       if (!room || !room.current_pair || room.current_pair.length < 2) return;
       const [a, b] = room.current_pair;
@@ -60,9 +68,9 @@ export default function Multiplayer() {
       const round = room.current_round || 1;
       const total = room.total_rounds || 10;
       document.getElementById('mp-round').textContent = `${t('round')} ${round} / ${total}`;
-      const oppId = room.host === playerId ? room.player_b : room.host;
-      updateRaceTracker((room.scores || {})[playerId] || 0, (room.scores || {})[oppId] || 0);
+      renderLeaderboard();
     }
+
     async function changeLang(l) {
       if (l === getLang()) return;
       sessionStorage.setItem('mp_lang', l);
@@ -71,7 +79,7 @@ export default function Multiplayer() {
       updateLangNav();
       updateUIText();
       if (!document.getElementById('mp-waiting').classList.contains('hidden') && room) {
-        document.getElementById('mp-waiting-msg').textContent = tf('roomInfo', { code: room.code, rounds: room.total_rounds });
+        renderWaitingScreen();
       }
       if (room && room.current_pair && room.current_pair.length === 2) {
         await ensureTranslated(room.current_pair);
@@ -83,7 +91,7 @@ export default function Multiplayer() {
     const uiText = {
       en: {
         title: 'Multiplayer',
-        subtitle: 'Compete with a friend in real time',
+        subtitle: 'Compete with up to 9 friends in real time',
         createGame: 'Create Game',
         joinGame: 'Join Game',
         language: 'Language',
@@ -96,73 +104,56 @@ export default function Multiplayer() {
         joinRoom: 'Join Room',
         roomCode: 'Room Code',
         loading: 'Loading...',
-        waiting: 'Waiting...',
-        waitingOpp: 'Waiting for opponent...',
+        waiting: 'Waiting Room',
+        waitingOpp: 'Waiting for other players...',
+        waitingHost: 'Waiting for host to start the game...',
         yourTurn: 'Your turn! Pick the earlier event.',
         loadingEvents: 'Loading events...',
         you: 'You',
         opponent: 'Opponent',
-        raceTitle: '🏁 Race to History Glory',
+        leaderboard: 'Leaderboard',
         round: 'Round',
         correct: 'Correct!',
         wrong: 'Wrong!',
         timedOut: 'No answer',
         wasEarlier: 'was earlier',
         didYouKnow: 'Did you know?',
-        oppLeft: 'Your opponent has fled in terror. Probably afraid of your historical knowledge.',
-        oppLeftSub: 'History will remember their cowardice. You win automatically!',
-        oppLeftTitle: 'Opponent Fled',
+        roomClosedTitle: 'Room Closed',
+        roomClosedMsg: 'The host has left. This room is no longer available.',
+        roomClosedSub: 'Create a new room or join another one.',
         backToLobby: 'Back to Lobby',
+        playersConnected: '{count} / {max} players connected',
+        startGame: 'Start Game',
+        nickname: 'Nickname',
+        pickColor: 'Color',
+        save: 'Save',
+        finalStandings: 'Final Standings',
+        rank: 'Rank',
+        score: 'Score',
+        playAgain: 'Play Again',
+        returnToLobby: 'Return to lobby',
+        restartGame: 'Restart game',
+        minPlayers: 'Need at least 2 players to start',
+        roomFull: 'Room is full',
         oppLabel: 'Opponent:',
-        roomInfo: 'Room code: {code} — {rounds} rounds',
-        youWon: '🏆 You Won!',
-        youLost: '😅 You Lost!',
-        tie: "🤝 It's a Tie!",
-        waitingOpp: 'Waiting for opponent...',
-        waitingRestart: 'Waiting for opponent...',
-        winnerWin: [
-          'History bows before your greatness!',
-          'You are the true Chronomancer!',
-          'Time itself cannot defeat you!',
-          'The history books will remember this victory!',
-          'Absolutely legendary performance!',
-        ],
-        winnerLose: [
-          'Even Napoleon lost at Waterloo...',
-          'History is written by the victors — study harder!',
-          'Close, but no cigar! Try again?',
-          'The timeline has spoken. Better luck next time!',
-          'Don\'t worry, Einstein failed exams too!',
-        ],
-        winnerTie: [
-          'Great minds think alike!',
-          'A perfectly balanced duel of historians!',
-          'Split decision — rematch time!',
-          'You are equally matched in time!',
-        ],
+        nextRound: 'Next round starting soon...',
+        sending: 'Sending...',
+        networkError: 'Network error. Please try again.',
+        failedCreate: 'Failed to create room',
+        failedJoin: 'Failed to join room',
+        roundsRange: 'Rounds must be 5–50',
+        needEvents: 'Need at least {min} events to play ({count})',
+        creating: 'Creating...',
         allRegions: 'All regions',
         allCountries: 'All countries',
         placeholderStartYear: 'e.g. 1500',
         placeholderEndYear: 'e.g. 2000',
         placeholderRoomCode: 'abc',
         checkingPool: 'Checking pool…',
-        youLeadBy: 'You lead by {diff} points',
-        oppLeadsBy: 'Opponent leads by {diff} points',
-        tiedRace: 'Tied — every point counts!',
-        restartGame: 'Restart game',
-        returnToLobby: 'Return to lobby',
-        missingEnv: 'Missing Supabase env vars',
-        sending: 'Sending...',
-        networkError: 'Network error. Please try again.',
-        failedCreate: 'Failed to create room',
-        failedJoin: 'Failed to join room',
-        roundsRange: 'Rounds must be 5–50 ❌',
-        needEvents: 'Need at least {min} events to play ({count}) ❌',
-        creating: 'Creating...',
       },
       cs: {
         title: 'Multiplayer',
-        subtitle: 'Soutěž se svým přítelem v reálném čase',
+        subtitle: 'Soutěž s až 9 přáteli v reálném čase',
         createGame: 'Vytvořit hru',
         joinGame: 'Připojit se ke hře',
         language: 'Jazyk',
@@ -175,63 +166,45 @@ export default function Multiplayer() {
         joinRoom: 'Připojit se',
         roomCode: 'Kód místnosti',
         loading: 'Načítání...',
-        waiting: 'Čekání...',
-        waitingOpp: 'Čeká se na soupeře...',
+        waiting: 'Čekací místnost',
+        waitingOpp: 'Čeká se na ostatní hráče...',
+        waitingHost: 'Čeká se na hostitele, aby spustil hru...',
         yourTurn: 'Jsi na tahu! Vyber dřívější událost.',
         loadingEvents: 'Načítání událostí...',
         you: 'Ty',
         opponent: 'Soupeř',
-        raceTitle: '🏁 Závod ke slávě dějin',
+        leaderboard: 'Žebříček',
         round: 'Kolo',
         correct: 'Správně!',
         wrong: 'Špatně!',
         timedOut: 'Bez odpovědi',
         wasEarlier: 'bylo dřív',
         didYouKnow: 'Věděl jsi?',
-        oppLeft: 'Tvůj soupeř utekl v hrůze. Asi se tě bojí...',
-        oppLeftSub: 'Dějiny si zapamatují jeho zbabělost. Vítězíš automaticky!',
-        oppLeftTitle: 'Soupeř utekl',
+        roomClosedTitle: 'Místnost uzavřena',
+        roomClosedMsg: 'Hostitel odešel. Tato místnost již není dostupná.',
+        roomClosedSub: 'Vytvoř novou místnost nebo se připoj k jiné.',
         backToLobby: 'Zpět do lobby',
-        oppLabel: 'Soupeř:',
-        roomInfo: 'Kód místnosti: {code} — {rounds} kol',
-        nextRound: 'Další kolo začíná za chvíli...',
-        youWon: '🏆 Vyhrál jsi!',
-        youLost: '😅 Prohrál jsi!',
-        tie: '🤝 Remíza!',
+        playersConnected: '{count} / {max} hráčů připojeno',
+        startGame: 'Spustit hru',
+        nickname: 'Přezdívka',
+        pickColor: 'Barva',
+        save: 'Uložit',
+        finalStandings: 'Konečné pořadí',
+        rank: 'Pozice',
+        score: 'Skóre',
         playAgain: 'Hrát znovu',
-        waitingRestart: 'Čekání na soupeře...',
-        winnerWin: [
-          'Dějiny se klaní před tvou velikostí!',
-          'Jsi pravý Chronomancer!',
-          'Sám čas tě nemůže porazit!',
-          'Dějepisné knihy si tuto výhru zapamatují!',
-          'Absolutně legendární výkon!',
-        ],
-        winnerLose: [
-          'I Napoleon prohrál u Waterloo...',
-          'Dějiny píší vítězové — studuj více!',
-          'Blízko, ale žádný doutník! Zkus to znovu?',
-          'Časová osa rozhodla. Příště to vyjde!',
-          'Neboj se, i Einstein propadával zkouškami!',
-        ],
-        winnerTie: [
-          'Skvělé myšlenky se shodují!',
-          'Dokonale vyrovnaný souboj historiků!',
-          'Rozdílný verdikt — odveta!',
-          'Jste vyrovnaní v čase!',
-        ],
-        youLeadBy: 'Vedeš o {diff} bodů',
-        oppLeadsBy: 'Soupeř vede o {diff} bodů',
-        tiedRace: 'Remíza — každý bod se počítá!',
-        restartGame: 'Restart hry',
         returnToLobby: 'Zpět do lobby',
-        missingEnv: 'Chybí Supabase proměnné prostředí',
+        restartGame: 'Restart hry',
+        minPlayers: 'Ke startu jsou potřeba alespoň 2 hráči',
+        roomFull: 'Místnost je plná',
+        oppLabel: 'Soupeř:',
+        nextRound: 'Další kolo začíná za chvíli...',
         sending: 'Odesílání...',
         networkError: 'Chyba sítě. Zkus to znovu.',
         failedCreate: 'Nepodařilo se vytvořit místnost',
         failedJoin: 'Nepodařilo se připojit do místnosti',
-        roundsRange: 'Kol musí být 5–50 ❌',
-        needEvents: 'Potřebuješ alespoň {min} událostí ke hře ({count}) ❌',
+        roundsRange: 'Kol musí být 5–50',
+        needEvents: 'Potřebuješ alespoň {min} událostí ke hře ({count})',
         creating: 'Vytváření...',
         allRegions: 'Všechny regiony',
         allCountries: 'Všechny země',
@@ -242,7 +215,7 @@ export default function Multiplayer() {
       },
       it: {
         title: 'Multiplayer',
-        subtitle: 'Gareggia contro un amico in tempo reale',
+        subtitle: 'Gareggia con fino a 9 amici in tempo reale',
         createGame: 'Crea partita',
         joinGame: 'Unisciti alla partita',
         language: 'Lingua',
@@ -255,64 +228,52 @@ export default function Multiplayer() {
         joinRoom: 'Unisciti',
         roomCode: 'Codice stanza',
         loading: 'Caricamento...',
-        waiting: 'In attesa...',
-        waitingOpp: 'In attesa dell\'avversario...',
+        waiting: 'Sala d\'attesa',
+        waitingOpp: 'In attesa degli altri giocatori...',
+        waitingHost: 'In attesa che l\'host avvii la partita...',
         yourTurn: 'Tocca a te! Scegli l\'evento più antico.',
         loadingEvents: 'Caricamento eventi...',
         you: 'Tu',
         opponent: 'Avversario',
-        raceTitle: '🏁 Corsa alla gloria storica',
+        leaderboard: 'Classifica',
         round: 'Round',
         correct: 'Corretto!',
         wrong: 'Sbagliato!',
         timedOut: 'Nessuna risposta',
         wasEarlier: 'era prima',
         didYouKnow: 'Lo sapevi?',
-        oppLeft: 'Il tuo avversario è fuggito nel terrore. Probabilmente ti teme...',
-        oppLeftSub: 'La storia ricorderà la sua codardia. Hai vinto automaticamente!',
-        oppLeftTitle: 'Avversario fuggito',
+        roomClosedTitle: 'Stanza chiusa',
+        roomClosedMsg: 'L\'host è uscito. Questa stanza non è più disponibile.',
+        roomClosedSub: 'Crea una nuova stanza o unisciti a un\'altra.',
         backToLobby: 'Torna alla lobby',
-        oppLabel: 'Avversario:',
-        roomInfo: 'Codice stanza: {code} — {rounds} round',
-        nextRound: 'Il prossimo round inizierà a breve...',
-        youWon: '🏆 Hai vinto!',
-        youLost: '😅 Hai perso!',
-        tie: '🤝 Pareggio!',
+        playersConnected: '{count} / {max} giocatori connessi',
+        startGame: 'Avvia partita',
+        nickname: 'Nickname',
+        pickColor: 'Colore',
+        save: 'Salva',
+        finalStandings: 'Classifica finale',
+        rank: 'Posizione',
+        score: 'Punteggio',
         playAgain: 'Gioca ancora',
-        waitingRestart: 'In attesa del avversario...',
-        winnerWin: [
-          'La storia si inchina davanti alla tua grandezza!',
-          'Sei il vero Chronomancer!',
-          'Il tempo stesso non può sconfiggerti!',
-          'I libri di storia ricorderanno questa vittoria!',
-          'Prestazione assolutamente leggendaria!',
-        ],
-        winnerLose: [
-          'Anche Napoleone perse a Waterloo...',
-          'La storia è scritta dai vincitori — studia di più!',
-          'Ci sei andato vicino! Riprova?',
-          'La linea temporale ha parlato. Buona fortuna la prossima volta!',
-          'Non preoccuparti, anche Einstein bocciava gli esami!',
-        ],
-        winnerTie: [
-          'Le grandi menti la pensano allo stesso modo!',
-          'Un duello di storici perfettamente bilanciato!',
-          'Decisione in parità — rivincita!',
-          'Siete alla pari nel tempo!',
-        ],
-        youLeadBy: 'Stai in testa di {diff} punti',
-        oppLeadsBy: 'L\'avversario è in testa di {diff} punti',
-        tiedRace: 'Pareggio — ogni punto conta!',
-        restartGame: 'Ricomincia partita',
         returnToLobby: 'Torna alla lobby',
-        missingEnv: 'Variabili d\'ambiente Supabase mancanti',
+        restartGame: 'Ricomincia partita',
+        minPlayers: 'Servono almeno 2 giocatori per iniziare',
+        roomFull: 'Stanza piena',
+        oppLabel: 'Avversario:',
+        nextRound: 'Il prossimo round inizierà a breve...',
         sending: 'Invio in corso...',
         networkError: 'Errore di rete. Riprova.',
         failedCreate: 'Impossibile creare la stanza',
         failedJoin: 'Impossibile unirsi alla stanza',
-        roundsRange: 'I round devono essere 5–50 ❌',
-        needEvents: 'Servono almeno {min} eventi per giocare ({count}) ❌',
+        roundsRange: 'I round devono essere 5–50',
+        needEvents: 'Servono almeno {min} eventi per giocare ({count})',
         creating: 'Creazione in corso...',
+        allRegions: 'Tutte le regioni',
+        allCountries: 'Tutti i paesi',
+        placeholderStartYear: 'es. 1500',
+        placeholderEndYear: 'es. 2000',
+        placeholderRoomCode: 'abc',
+        checkingPool: 'Controllo disponibilità...',
       },
     };
 
@@ -345,24 +306,325 @@ export default function Multiplayer() {
       document.getElementById('mp-lobby-roomCode-label').textContent = t('roomCode');
       document.getElementById('btn-join').textContent = t('joinRoom');
       document.getElementById('mp-loading').textContent = t('loading');
-      document.getElementById('mp-waiting-msg').textContent = t('waiting');
-      document.getElementById('mp-game-you-label').textContent = t('you');
-      document.getElementById('mp-game-opp-label').textContent = t('opponent');
-      document.getElementById('mp-race-title').textContent = t('raceTitle');
-      document.getElementById('mp-race-me-label').textContent = t('you');
-      document.getElementById('mp-race-opp-label').textContent = t('opponent');
+      document.getElementById('mp-waiting-title').textContent = t('waiting');
+      document.getElementById('mp-nickname-label').textContent = t('nickname');
+      document.getElementById('mp-color-label').textContent = t('pickColor');
+      document.getElementById('btn-save-profile').textContent = t('save');
+      document.getElementById('btn-start-game').textContent = t('startGame');
+      document.getElementById('mp-guest-message').textContent = t('waitingHost');
+      document.getElementById('mp-leaderboard-title').textContent = t('leaderboard');
       document.getElementById('mp-next-round').textContent = t('nextRound');
       document.getElementById('btn-play-again').textContent = t('restartGame');
-      document.getElementById('btn-back-lobby').textContent = t('returnToLobby');
+      document.getElementById('btn-back-lobby').textContent = t('backToLobby');
       document.getElementById('btn-new-game').textContent = t('returnToLobby');
       document.getElementById('mp-startYear').placeholder = t('placeholderStartYear');
       document.getElementById('mp-endYear').placeholder = t('placeholderEndYear');
       document.getElementById('joinCode').placeholder = t('placeholderRoomCode');
-      // Update filter dropdown default texts if not yet populated
       const regionSel = document.getElementById('mp-regionFilter');
       if (regionSel && regionSel.options[0]) regionSel.options[0].textContent = t('allRegions');
       const countrySel = document.getElementById('mp-countryFilter');
       if (countrySel && countrySel.options[0]) countrySel.options[0].textContent = t('allCountries');
+    }
+
+    function getMyPlayer() {
+      if (!room || !room.players) return null;
+      return room.players.find((p) => p.id === playerId);
+    }
+
+    function isHost() {
+      const me = getMyPlayer();
+      return me?.isHost || false;
+    }
+
+    function renderWaitingScreen() {
+      if (!room) return;
+      document.getElementById('mp-room-info').textContent = tf('playersConnected', {
+        count: room.players?.length || 1,
+        max: room.max_players || 10,
+      });
+
+      const listEl = document.getElementById('mp-players-list');
+      listEl.innerHTML = '';
+      (room.players || []).forEach((p) => {
+        const isMe = p.id === playerId;
+        const div = document.createElement('div');
+        div.style.cssText = `
+          display:flex; align-items:center; gap:0.5rem;
+          padding:0.5rem 0.75rem; border-radius:8px;
+          background: rgba(255,255,255,0.05);
+          margin-bottom:0.4rem;
+          font-weight: ${isMe ? '700' : '400'};
+          border: ${isMe ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent'};
+        `;
+        const dot = document.createElement('span');
+        dot.style.cssText = `width:12px;height:12px;border-radius:50%;background:${p.color || '#94a3b8'};display:inline-block;flex-shrink:0;`;
+        const name = document.createElement('span');
+        name.textContent = p.nickname || (p.isHost ? 'Host' : 'Guest');
+        if (isMe) {
+          const badge = document.createElement('span');
+          badge.textContent = ` (${t('you')})`;
+          badge.style.color = '#94a3b8';
+          badge.style.fontSize = '0.8rem';
+          name.appendChild(badge);
+        }
+        if (p.isHost) {
+          const hostBadge = document.createElement('span');
+          hostBadge.textContent = ' 👑';
+          hostBadge.style.fontSize = '0.8rem';
+          name.appendChild(hostBadge);
+        }
+        div.appendChild(dot);
+        div.appendChild(name);
+        listEl.appendChild(div);
+      });
+
+      // Profile editor
+      const me = getMyPlayer();
+      const nicknameInput = document.getElementById('mp-nickname-input');
+      if (me && nicknameInput && nicknameInput.value !== me.nickname) {
+        nicknameInput.value = me.nickname || '';
+      }
+
+      // Color picker
+      const colorPicker = document.getElementById('mp-color-picker');
+      if (colorPicker && colorPicker.children.length === 0) {
+        DEFAULT_COLORS.forEach((c) => {
+          const btn = document.createElement('button');
+          btn.style.cssText = `
+            width:28px; height:28px; border-radius:50%; border:2px solid transparent;
+            background:${c}; cursor:pointer; padding:0; margin:2px;
+          `;
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('#mp-color-picker button').forEach((b) => {
+              b.style.borderColor = 'transparent';
+            });
+            btn.style.borderColor = '#fff';
+            btn.dataset.selected = c;
+          });
+          colorPicker.appendChild(btn);
+        });
+      }
+
+      // Show/hide host controls
+      const isHostPlayer = isHost();
+      document.getElementById('mp-host-controls').classList.toggle('hidden', !isHostPlayer);
+      document.getElementById('mp-guest-message').classList.toggle('hidden', isHostPlayer);
+
+      // Enable/disable start button
+      const startBtn = document.getElementById('btn-start-game');
+      if (startBtn) {
+        const canStart = (room.players?.length || 0) >= 2;
+        startBtn.disabled = !canStart;
+        startBtn.style.opacity = canStart ? '1' : '0.5';
+        startBtn.style.cursor = canStart ? 'pointer' : 'not-allowed';
+      }
+    }
+
+    async function saveProfile() {
+      if (!room || !room.code) return;
+      const nickname = document.getElementById('mp-nickname-input').value.trim().slice(0, 15);
+      const selectedColorBtn = document.querySelector('#mp-color-picker button[style*="border-color: rgb(255, 255, 255)"], #mp-color-picker button[style*="border-color: #fff"]');
+      const color = selectedColorBtn?.dataset.selected || getMyPlayer()?.color;
+      try {
+        await fetch('/api/room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update-profile', roomCode: room.code, playerId, nickname, color }),
+        });
+      } catch (err) {
+        console.error('Profile update failed', err);
+      }
+    }
+
+    async function startGame() {
+      if (!room || !room.code) return;
+      const btn = document.getElementById('btn-start-game');
+      btn.disabled = true;
+      btn.textContent = t('sending');
+      try {
+        const res = await fetch('/api/room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'start', roomCode: room.code, playerId }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          btn.disabled = false;
+          btn.textContent = t('startGame');
+          document.getElementById('mp-start-error').textContent = data.error || t('networkError');
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = t('startGame');
+        document.getElementById('mp-start-error').textContent = t('networkError');
+      }
+    }
+
+    async function leaveRoom() {
+      if (!room || !room.code) return;
+      try {
+        await fetch('/api/room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'leave', roomCode: room.code, playerId }),
+        });
+      } catch (err) {
+        console.error('Leave failed', err);
+      }
+    }
+
+    function renderLeaderboard() {
+      if (!room || !room.players) return;
+      const scores = room.scores || {};
+      const players = [...(room.players || [])].map((p) => ({
+        ...p,
+        score: scores[p.id] || 0,
+      }));
+      players.sort((a, b) => b.score - a.score);
+
+      const container = document.getElementById('mp-leaderboard-body');
+      if (!container) return;
+      container.innerHTML = '';
+
+      players.forEach((p, idx) => {
+        const isMe = p.id === playerId;
+        const row = document.createElement('div');
+        row.style.cssText = `
+          display:flex; align-items:center; justify-content:space-between;
+          padding:0.4rem 0.6rem; border-radius:6px;
+          background: ${isMe ? 'rgba(255,255,255,0.08)' : 'transparent'};
+          font-size: 0.9rem; gap: 0.5rem;
+        `;
+
+        const left = document.createElement('div');
+        left.style.cssText = 'display:flex; align-items:center; gap:0.5rem;';
+        const rank = document.createElement('span');
+        rank.textContent = `${idx + 1}.`;
+        rank.style.cssText = 'width:1.5rem; text-align:right; color:#94a3b8; font-weight:700;';
+        const dot = document.createElement('span');
+        dot.style.cssText = `width:10px;height:10px;border-radius:50%;background:${p.color || '#94a3b8'};display:inline-block;`;
+        const name = document.createElement('span');
+        name.textContent = p.nickname || 'Guest';
+        if (isMe) name.style.fontWeight = '700';
+
+        left.appendChild(rank);
+        left.appendChild(dot);
+        left.appendChild(name);
+
+        const score = document.createElement('span');
+        score.textContent = p.score;
+        score.style.cssText = 'font-weight:800; color:#fbbf24; min-width:2rem; text-align:right;';
+
+        row.appendChild(left);
+        row.appendChild(score);
+        container.appendChild(row);
+      });
+    }
+
+    function renderRoundLeaderboard(result) {
+      if (!result || !result.answered) return;
+      const container = document.getElementById('mp-round-leaderboard');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const entries = Object.entries(result.answered).map(([pid, ans]) => {
+        const player = room?.players?.find((p) => p.id === pid);
+        return {
+          id: pid,
+          nickname: player?.nickname || ans.nickname || 'Guest',
+          color: player?.color || ans.color || '#94a3b8',
+          points: ans.points || 0,
+          isCorrect: ans.isCorrect,
+          timedOut: ans.timedOut,
+          isMe: pid === playerId,
+        };
+      });
+      entries.sort((a, b) => b.points - a.points);
+
+      const title = document.createElement('div');
+      title.textContent = t('leaderboard');
+      title.style.cssText = 'font-size:0.75rem; text-transform:uppercase; font-weight:800; color:#94a3b8; letter-spacing:0.05em; margin-bottom:0.5rem; text-align:center;';
+      container.appendChild(title);
+
+      entries.forEach((entry, idx) => {
+        const row = document.createElement('div');
+        row.style.cssText = `
+          display:flex; align-items:center; justify-content:space-between;
+          padding:0.3rem 0.5rem; border-radius:4px;
+          font-size: 0.85rem; gap: 0.5rem;
+          ${entry.isMe ? 'background:rgba(255,255,255,0.06);' : ''}
+        `;
+        const left = document.createElement('div');
+        left.style.cssText = 'display:flex; align-items:center; gap:0.4rem;';
+        const dot = document.createElement('span');
+        dot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${entry.color};display:inline-block;`;
+        const name = document.createElement('span');
+        name.textContent = `${idx + 1}. ${entry.nickname}`;
+        if (entry.isMe) name.style.fontWeight = '700';
+        left.appendChild(dot);
+        left.appendChild(name);
+
+        const right = document.createElement('span');
+        let symbol = '';
+        if (entry.timedOut) symbol = '⏱️';
+        else if (entry.isCorrect) symbol = '✅';
+        else symbol = '❌';
+        right.textContent = `${symbol} ${entry.points > 0 ? '+' : ''}${entry.points}pts`;
+        right.style.fontWeight = '700';
+        if (entry.isCorrect) right.style.color = '#22c55e';
+        else if (entry.timedOut) right.style.color = '#fbbf24';
+        else right.style.color = '#ef4444';
+
+        row.appendChild(left);
+        row.appendChild(right);
+        container.appendChild(row);
+      });
+    }
+
+    function renderFinalStandings(standings) {
+      const container = document.getElementById('mp-standings');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!standings || !Array.isArray(standings) || standings.length === 0) return;
+
+      standings.forEach((s, idx) => {
+        const isMe = s.id === playerId;
+        const row = document.createElement('div');
+        row.style.cssText = `
+          display:flex; align-items:center; justify-content:space-between;
+          padding:0.6rem 1rem; border-radius:8px;
+          background: ${isMe ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.03)'};
+          margin-bottom: 0.4rem; font-size: 1rem;
+          border: ${isMe ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent'};
+        `;
+
+        const left = document.createElement('div');
+        left.style.cssText = 'display:flex; align-items:center; gap:0.6rem;';
+
+        const rank = document.createElement('span');
+        rank.textContent = `#${idx + 1}`;
+        rank.style.cssText = `width:2.5rem; text-align:center; font-weight:800; color:${idx < 3 ? '#fbbf24' : '#94a3b8'}; font-size:1.1rem;`;
+
+        const dot = document.createElement('span');
+        dot.style.cssText = `width:12px;height:12px;border-radius:50%;background:${s.color || '#94a3b8'};display:inline-block;`;
+
+        const name = document.createElement('span');
+        name.textContent = s.nickname || 'Guest';
+        name.style.fontWeight = isMe ? '700' : '400';
+
+        left.appendChild(rank);
+        left.appendChild(dot);
+        left.appendChild(name);
+
+        const score = document.createElement('span');
+        score.textContent = s.score;
+        score.style.cssText = 'font-weight:800; color:#fbbf24; font-size:1.2rem;';
+
+        row.appendChild(left);
+        row.appendChild(score);
+        container.appendChild(row);
+      });
     }
 
     async function initLobby() {
@@ -508,7 +770,8 @@ export default function Multiplayer() {
         const json = await res.json();
         if (json.room) {
           room = json.room;
-          showLobby(tf('roomInfo', { code: room.code, rounds: room.total_rounds }));
+          showWaiting();
+          renderWaitingScreen();
           subscribeToRoom(room.code);
         } else {
           document.getElementById('mp-loading').classList.remove('hidden');
@@ -539,8 +802,8 @@ export default function Multiplayer() {
       const json = await res.json();
       if (json.room) {
         room = json.room;
-        showGame();
-        renderRoom();
+        showWaiting();
+        renderWaitingScreen();
         subscribeToRoom(room.code);
       } else {
         document.getElementById('mp-loading').classList.remove('hidden');
@@ -562,25 +825,26 @@ export default function Multiplayer() {
 
           if (newRoom.state === 'playing') {
             if (oldRoom?.state === 'finished') {
-              // Clean slate for a restarted game
               lastShownResultRound = null;
-              pendingRaceScores = null;
               suppressRaceTracker = false;
               currentRenderedRound = null;
-              opponentDisconnected = false;
+              roomClosed = false;
               pendingWinnerRoom = null;
               hideWinner();
               const btn = document.getElementById('btn-play-again');
               if (btn) { btn.disabled = false; btn.textContent = t('restartGame'); }
             }
-            showGame();
+            if (oldRoom?.state === 'lobby') {
+              // Transition from waiting to game
+              showGame();
+            }
+            renderRoom();
           }
 
           if (newRoom.state === 'finished') {
             const lr = newRoom.last_result;
             const resultRound = lr?.round || 0;
             if (lr && resultRound > lastShownResultRound) {
-              // Last round result hasn't been shown yet — show it first.
               pendingWinnerRoom = newRoom;
               showRoundResult(newRoom);
               suppressRaceTracker = true;
@@ -590,8 +854,20 @@ export default function Multiplayer() {
             return;
           }
 
-          // Skip re-rendering if only metadata (e.g. heartbeats) changed —
-          // prevents "Načítání" flash every 10 seconds.
+          if (newRoom.state === 'lobby') {
+            if (oldRoom?.state === 'finished') {
+              // Play again - back to waiting screen
+              hideWinner();
+              showWaiting();
+              renderWaitingScreen();
+              return;
+            }
+            // Waiting screen updates
+            renderWaitingScreen();
+            return;
+          }
+
+          // Skip re-rendering if only metadata changed
           if (oldRoom &&
               oldRoom.current_round === newRoom.current_round &&
               oldRoom.current_pair?.[0]?.id === newRoom.current_pair?.[0]?.id &&
@@ -601,21 +877,15 @@ export default function Multiplayer() {
             return;
           }
 
-          // Always render current game state first so new round cards are ready underneath
           renderRoom();
 
-          // Show result overlay if there's a result for a round we haven't seen yet
           if (newRoom.last_result) {
             showRoundResult(newRoom);
             suppressRaceTracker = true;
           }
-
-          // Opponent disconnect detection is handled by the server poll below
-          // (client-side Date.now() is unreliable due to clock skew).
         })
         .subscribe();
 
-      // Poll server-side heartbeat check every 5s — only reliable disconnect detection
       if (disconnectCheckInterval) clearInterval(disconnectCheckInterval);
       disconnectCheckInterval = setInterval(checkHeartbeatOnce, 5000);
     }
@@ -651,14 +921,22 @@ export default function Multiplayer() {
       };
     }
 
-    function showLobby(msg) {
-      document.getElementById('mp-lobby').classList.add('hidden');
-      document.getElementById('mp-waiting').classList.remove('hidden');
+    function showLobby() {
+      document.getElementById('mp-lobby').classList.remove('hidden');
+      document.getElementById('mp-waiting').classList.add('hidden');
+      document.getElementById('mp-game').classList.add('hidden');
       document.getElementById('mp-winner')?.classList.add('hidden');
       document.getElementById('mp-result-overlay')?.classList.add('hidden');
       document.getElementById('mp-disconnect')?.classList.add('hidden');
-      document.getElementById('mp-waiting-msg').textContent = msg;
-      // Start sending heartbeats once in a room context
+    }
+
+    function showWaiting() {
+      document.getElementById('mp-lobby').classList.add('hidden');
+      document.getElementById('mp-waiting').classList.remove('hidden');
+      document.getElementById('mp-game').classList.add('hidden');
+      document.getElementById('mp-winner')?.classList.add('hidden');
+      document.getElementById('mp-result-overlay')?.classList.add('hidden');
+      document.getElementById('mp-disconnect')?.classList.add('hidden');
       if (!heartbeatInterval) {
         heartbeatInterval = setInterval(sendHeartbeat, 10000);
       }
@@ -670,7 +948,6 @@ export default function Multiplayer() {
       document.getElementById('mp-winner')?.classList.add('hidden');
       document.getElementById('mp-disconnect')?.classList.add('hidden');
       document.getElementById('mp-game').classList.remove('hidden');
-      // Ensure heartbeat sender is running for both players once in-game
       if (!heartbeatInterval) {
         heartbeatInterval = setInterval(sendHeartbeat, 10000);
       }
@@ -685,54 +962,12 @@ export default function Multiplayer() {
       document.getElementById('mp-game').classList.add('hidden');
       document.getElementById('mp-winner').classList.remove('hidden');
 
-      const w = roomData.winner;
-      const isMe = w?.id === playerId;
-      const myScore = (roomData.scores || {})[playerId] || 0;
-      const oppId = roomData.host === playerId ? roomData.player_b : roomData.host;
-      const oppScore = (roomData.scores || {})[oppId] || 0;
-
+      const standings = roomData.winner;
       const titleEl = document.getElementById('mp-winner-text');
-      const msgEl = document.getElementById('mp-winner-msg');
-      const scoreEl = document.getElementById('mp-winner-scores');
+      titleEl.textContent = t('finalStandings');
 
-      const msgs = uiText[getLang()] || uiText.en;
-
-      if (isMe) {
-        titleEl.textContent = msgs.youWon;
-        msgEl.textContent = msgs.winnerWin[Math.floor(Math.random() * msgs.winnerWin.length)];
-      } else if (w?.id === null) {
-        titleEl.textContent = msgs.tie;
-        msgEl.textContent = msgs.winnerTie[Math.floor(Math.random() * msgs.winnerTie.length)];
-      } else {
-        titleEl.textContent = msgs.youLost;
-        msgEl.textContent = msgs.winnerLose[Math.floor(Math.random() * msgs.winnerLose.length)];
-      }
-
-      scoreEl.textContent = `${myScore} — ${oppScore}`;
+      renderFinalStandings(standings);
     }
-
-    const winnerMessages = {
-      win: [
-        'History bows before your greatness!',
-        'You are the true Chronomancer!',
-        'Time itself cannot defeat you!',
-        'The history books will remember this victory!',
-        'Absolutely legendary performance!',
-      ],
-      lose: [
-        'Even Napoleon lost at Waterloo...',
-        'History is written by the victors — study harder!',
-        'Close, but no cigar! Try again?',
-        'The timeline has spoken. Better luck next time!',
-        'Don\'t worry, Einstein failed exams too!',
-      ],
-      tie: [
-        'Great minds think alike!',
-        'A perfectly balanced duel of historians!',
-        'Split decision — rematch time!',
-        'You are equally matched in time!',
-      ],
-    };
 
     async function showRoundResult(roomData) {
       const lr = roomData.last_result;
@@ -740,14 +975,12 @@ export default function Multiplayer() {
 
       const overlay = document.getElementById('mp-result-overlay');
       const myAns = lr.answered[playerId];
-      const oppId = roomData.host === playerId ? roomData.player_b : roomData.host;
-      const oppAns = lr.answered[oppId];
 
-      if (!myAns || !oppAns) return;
+      if (!myAns) return;
 
       const resultRound = lr.round || 0;
-      if (resultRound <= lastShownResultRound) return; // already showed this result
-      if (!overlay.classList.contains('hidden')) return; // safety
+      if (resultRound <= lastShownResultRound) return;
+      if (!overlay.classList.contains('hidden')) return;
 
       lastShownResultRound = resultRound;
 
@@ -757,38 +990,23 @@ export default function Multiplayer() {
       const earlierText = getText(lr.earlier);
 
       const myResultEl = document.getElementById('mp-my-result');
-      const oppResultEl = document.getElementById('mp-opp-result');
       const resultPairEl = document.getElementById('mp-result-pair');
 
       if (myAns.timedOut) {
-        myResultEl.innerHTML = `\u003cdiv style="color: #fbbf24; font-size: 1.5rem; font-weight: 800;">⏱️ ${t('timedOut')} \u003cspan style="color: #fbbf24;">0pts\u003c/span>\u003c/div>
-          \u003cdiv style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}\u003c/div>`;
+        myResultEl.innerHTML = `<div style="color: #fbbf24; font-size: 1.5rem; font-weight: 800;">⏱️ ${t('timedOut')} <span style="color: #fbbf24;">0pts</span></div>
+          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
         myResultEl.style.borderColor = '#fbbf24';
         myResultEl.style.background = 'rgba(251,191,36,0.1)';
       } else if (myAns.isCorrect) {
-        myResultEl.innerHTML = `\u003cdiv style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ ${t('correct')} \u003cspan style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts\u003c/span>\u003c/div>
-          \u003cdiv style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}\u003c/div>`;
+        myResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ ${t('correct')} <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
+          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
         myResultEl.style.borderColor = '#22c55e';
         myResultEl.style.background = 'rgba(34,197,94,0.1)';
       } else {
-        myResultEl.innerHTML = `\u003cdiv style="color: #ef4444; font-size: 1.5rem; font-weight: 800;">❌ ${t('wrong')} \u003cspan style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts\u003c/span>\u003c/div>
-          \u003cdiv style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}\u003c/div>`;
+        myResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.5rem; font-weight: 800;">❌ ${t('wrong')} <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
+          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
         myResultEl.style.borderColor = '#ef4444';
         myResultEl.style.background = 'rgba(239,68,68,0.1)';
-      }
-
-      if (oppAns.timedOut) {
-        oppResultEl.innerHTML = `<div style="color: #fbbf24; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ⏱️ ${t('timedOut')} 0pts</div>`;
-        oppResultEl.style.borderColor = '#fbbf24';
-        oppResultEl.style.background = 'rgba(251,191,36,0.1)';
-      } else if (oppAns.isCorrect) {
-        oppResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ✅ +${oppAns.points}pts</div>`;
-        oppResultEl.style.borderColor = '#22c55e';
-        oppResultEl.style.background = 'rgba(34,197,94,0.1)';
-      } else {
-        oppResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.2rem; font-weight: 700;">${t('oppLabel')} ❌ ${oppAns.points}pts</div>`;
-        oppResultEl.style.borderColor = '#ef4444';
-        oppResultEl.style.background = 'rgba(239,68,68,0.1)';
       }
 
       const a = lr.pair[0];
@@ -807,18 +1025,18 @@ export default function Multiplayer() {
         </div>
       </div>`;
 
-      // Add Fun Fact section below the pair comparison
       const funFactText = earlierText.fun_fact || lr.fun_fact || '';
       if (funFactText) {
-        resultPairEl.innerHTML += `\u003cdiv style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border-radius: 10px; border: 1px solid rgba(99,102,241,0.2); text-align: center;">
-          \u003cdiv style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: #818cf8; letter-spacing: 0.05em; margin-bottom: 0.25rem;">${t('didYouKnow')}\u003c/div>
-          \u003cdiv style="font-size: 0.95rem; color: #c7d2fe; font-style: italic; line-height: 1.5;">${funFactText}\u003c/div>
-        \u003c/div>`;
+        resultPairEl.innerHTML += `<div style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border-radius: 10px; border: 1px solid rgba(99,102,241,0.2); text-align: center;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: #818cf8; letter-spacing: 0.05em; margin-bottom: 0.25rem;">${t('didYouKnow')}</div>
+          <div style="font-size: 0.95rem; color: #c7d2fe; font-style: italic; line-height: 1.5;">${funFactText}</div>
+        </div>`;
       }
+
+      renderRoundLeaderboard(lr);
 
       overlay.classList.remove('hidden');
 
-      // Hide locally when server says next round starts, or after default 3.5s
       const nextRoundAt = roomData.next_round_at ? new Date(roomData.next_round_at) : null;
       const now = new Date();
       const delay = nextRoundAt ? Math.max(3000, nextRoundAt.getTime() - now.getTime()) : 3500;
@@ -830,10 +1048,6 @@ export default function Multiplayer() {
 
     function hideRoundResult() {
       document.getElementById('mp-result-overlay').classList.add('hidden');
-      if (pendingRaceScores) {
-        updateRaceTracker(pendingRaceScores[0], pendingRaceScores[1]);
-        pendingRaceScores = null;
-      }
       suppressRaceTracker = false;
       if (pendingWinnerRoom) {
         const finalRoom = pendingWinnerRoom;
@@ -883,23 +1097,10 @@ export default function Multiplayer() {
 
       document.getElementById('mp-nameA').textContent = ta.short_name;
       document.getElementById('mp-descA').textContent = ta.description;
-
       document.getElementById('mp-nameB').textContent = tb.short_name;
       document.getElementById('mp-descB').textContent = tb.description;
 
-      const scores = room.scores || {};
-      const oppId = room.host === playerId ? room.player_b : room.host;
-      const myScore = scores[playerId] || 0;
-      const oppScore = scores[oppId] || 0;
-
-      document.getElementById('mp-my-score').textContent = myScore;
-      document.getElementById('mp-opp-score').textContent = oppScore;
-
-      if (suppressRaceTracker) {
-        pendingRaceScores = [myScore, oppScore];
-      } else {
-        updateRaceTracker(myScore, oppScore);
-      }
+      renderLeaderboard();
 
       const round = room.current_round || 1;
       const total = room.total_rounds || 10;
@@ -908,7 +1109,6 @@ export default function Multiplayer() {
       const ans = room.answered || {};
       const myAns = ans[playerId];
 
-      // Only reset timers when the round/pair actually changes — heartbeats should not reset the countdown
       const pairIds = pair.map((e) => e?.id).join('-');
       const roundFp = `${room.current_round || 0}-${pairIds}-${myAns ? 'answered' : 'open'}`;
       const shouldResetTimers = roundFp !== currentRenderedRound;
@@ -945,7 +1145,6 @@ export default function Multiplayer() {
           updateCountdown();
           countdownInterval = setInterval(updateCountdown, 1000);
           turnTimeoutId = setTimeout(() => {
-            // Safety: only auto-submit if we still haven't answered
             const currentAns = room?.answered || {};
             if (currentAns[playerId] === undefined) {
               guess('timeout');
@@ -954,74 +1153,6 @@ export default function Multiplayer() {
           document.getElementById('mp-cardA').classList.remove('disabled');
           document.getElementById('mp-cardB').classList.remove('disabled');
         }
-      }
-    }
-
-    function updateRaceTracker(myScore, oppScore) {
-      const total = myScore + oppScore;
-      let myPct, oppPct;
-
-      if (total === 0) {
-        myPct = 50;
-        oppPct = 50;
-      } else {
-        myPct = (myScore / total) * 100;
-        oppPct = (oppScore / total) * 100;
-      }
-
-      // Keep a sliver visible so the track never looks empty
-      if (myPct < 3) myPct = 3;
-      if (myPct > 97) myPct = 97;
-      oppPct = 100 - myPct;
-
-      const myFill = document.getElementById('mp-race-me-fill');
-      const oppFill = document.getElementById('mp-race-opp-fill');
-      const center = document.getElementById('mp-race-center');
-      const centerIcon = document.getElementById('mp-race-center-icon');
-      const centerDiff = document.getElementById('mp-race-center-diff');
-      const leadMsg = document.getElementById('mp-race-lead-msg');
-      const track = document.getElementById('mp-race-track');
-
-      if (myFill) myFill.style.width = myPct + '%';
-      if (oppFill) oppFill.style.width = oppPct + '%';
-      if (center) center.style.left = myPct + '%';
-
-      // Update score labels in the race track
-      const meScoreEl = document.getElementById('mp-race-me-score');
-      const oppScoreEl = document.getElementById('mp-race-opp-score');
-      if (meScoreEl) meScoreEl.textContent = myScore;
-      if (oppScoreEl) oppScoreEl.textContent = oppScore;
-
-      const diff = myScore - oppScore;
-
-      if (track) {
-        track.classList.remove('race-track--leading', 'race-track--losing', 'race-track--tied');
-        if (diff > 0) track.classList.add('race-track--leading');
-        else if (diff < 0) track.classList.add('race-track--losing');
-        else track.classList.add('race-track--tied');
-      }
-
-      if (diff > 0) {
-        if (centerIcon) centerIcon.textContent = '⚡';
-        if (centerDiff) {
-          centerDiff.textContent = '+' + diff;
-          centerDiff.style.color = '#22c55e';
-        }
-        if (leadMsg) leadMsg.textContent = tf('youLeadBy', { diff });
-      } else if (diff < 0) {
-        if (centerIcon) centerIcon.textContent = '🔥';
-        if (centerDiff) {
-          centerDiff.textContent = '+' + Math.abs(diff);
-          centerDiff.style.color = '#ef4444';
-        }
-        if (leadMsg) leadMsg.textContent = tf('oppLeadsBy', { diff: Math.abs(diff) });
-      } else {
-        if (centerIcon) centerIcon.textContent = '⚖️';
-        if (centerDiff) {
-          centerDiff.textContent = '0';
-          centerDiff.style.color = '#fbbf24';
-        }
-        if (leadMsg) leadMsg.textContent = t('tiedRace');
       }
     }
 
@@ -1038,10 +1169,8 @@ export default function Multiplayer() {
       }
     }
 
-    let lastOppCheckAlive = null;
-
     async function checkHeartbeatOnce() {
-      if (!room || !room.code || room.state === 'finished' || room.state === 'lobby' || opponentDisconnected) return;
+      if (!room || !room.code || roomClosed) return;
       try {
         const res = await fetch('/api/room', {
           method: 'POST',
@@ -1053,23 +1182,43 @@ export default function Multiplayer() {
           return;
         }
         const data = await res.json();
-        console.log('[heartbeat check] alive:', data.alive, 'room:', room.code);
-        if (data.alive === true) {
-          lastOppCheckAlive = Date.now();
-        }
-        if (data.alive === false) {
-          showDisconnectOverlay();
+        if (data.roomClosed) {
+          roomClosed = true;
+          showRoomClosedOverlay();
+          return;
         }
       } catch (e) {
         console.error('Heartbeat check failed', e);
       }
     }
 
+    function showRoomClosedOverlay() {
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+      if (turnTimeoutId) { clearTimeout(turnTimeoutId); turnTimeoutId = null; }
+      if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+      if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+      if (disconnectCheckInterval) { clearInterval(disconnectCheckInterval); disconnectCheckInterval = null; }
+
+      document.getElementById('mp-lobby')?.classList.add('hidden');
+      document.getElementById('mp-waiting')?.classList.add('hidden');
+      document.getElementById('mp-game')?.classList.add('hidden');
+      document.getElementById('mp-result-overlay')?.classList.add('hidden');
+      document.getElementById('mp-winner')?.classList.add('hidden');
+      document.getElementById('mp-disconnect')?.classList.remove('hidden');
+
+      document.getElementById('mp-disconnect-title').textContent = t('roomClosedTitle');
+      document.getElementById('mp-disconnect-subtitle').textContent = t('roomClosedMsg');
+      document.getElementById('mp-disconnect-msg').textContent = t('roomClosedSub');
+    }
+
     async function restartGame() {
       if (!room || !room.code) return;
       const btn = document.getElementById('btn-play-again');
       btn.disabled = true;
-      btn.textContent = t('waitingRestart');
+      btn.textContent = t('waitingOpp');
       try {
         const res = await fetch('/api/room', {
           method: 'POST',
@@ -1078,53 +1227,15 @@ export default function Multiplayer() {
         });
         const data = await res.json();
         if (data.waiting) {
-          // Waiting for opponent — button already shows "Waiting..."
           return;
         }
         if (data.restarted) {
-          // Both ready — Supabase realtime will push state: 'playing'
-          // The subscription handler will call showGame() and renderRoom().
+          // Realtime will push state: 'lobby'
         }
       } catch (err) {
         console.error('Restart failed', err);
         btn.disabled = false;
         btn.textContent = t('restartGame');
-      }
-    }
-
-    async function showDisconnectOverlay() {
-      if (opponentDisconnected) return;
-      opponentDisconnected = true;
-      // Unsubscribe from realtime so finished-room events don't overwrite us
-      if (channel) {
-        supabase.removeChannel(channel);
-        channel = null;
-      }
-      // Stop local timers
-      if (turnTimeoutId) { clearTimeout(turnTimeoutId); turnTimeoutId = null; }
-      if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
-      if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
-      if (disconnectCheckInterval) { clearInterval(disconnectCheckInterval); disconnectCheckInterval = null; }
-      // Show disconnect overlay
-      document.getElementById('mp-game')?.classList.add('hidden');
-      document.getElementById('mp-result-overlay')?.classList.add('hidden');
-      document.getElementById('mp-winner')?.classList.add('hidden');
-      document.getElementById('mp-disconnect')?.classList.remove('hidden');
-      const msgs = uiText[getLang()] || uiText.en;
-      document.getElementById('mp-disconnect-title').textContent = '🏃 ' + (msgs.oppLeftTitle || 'Opponent Fled');
-      document.getElementById('mp-disconnect-subtitle').textContent = msgs.oppLeft || '';
-      document.getElementById('mp-disconnect-msg').textContent = msgs.oppLeftSub || '';
-      // Optionally auto-finish the game for this player after a delay
-      if (room && room.id && room.state !== 'finished') {
-        try {
-          await fetch('/api/finish', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ roomId: room.id, playerId }),
-          });
-        } catch (e) {
-          console.error('Auto-finish failed', e);
-        }
       }
     }
 
@@ -1158,6 +1269,7 @@ export default function Multiplayer() {
       }
     }
 
+    // Event listeners
     document.getElementById('btn-create')?.addEventListener('click', createRoom);
     document.getElementById('btn-join')?.addEventListener('click', joinRoom);
     document.getElementById('mp-cardA')?.addEventListener('click', () => guess('A'));
@@ -1168,10 +1280,15 @@ export default function Multiplayer() {
     document.getElementById('mp-langSelect')?.addEventListener('change', () => {
       changeLang(document.getElementById('mp-langSelect').value);
     });
+    document.getElementById('btn-save-profile')?.addEventListener('click', saveProfile);
+    document.getElementById('btn-start-game')?.addEventListener('click', startGame);
 
     document.querySelectorAll('#mp-game .lang-btn').forEach((btn) => {
       btn.addEventListener('click', () => changeLang(btn.dataset.lang));
     });
+
+    // Leave room on page unload
+    window.addEventListener('beforeunload', leaveRoom);
 
     return () => {
       if (channel) supabase.removeChannel(channel);
@@ -1179,18 +1296,18 @@ export default function Multiplayer() {
       if (disconnectCheckInterval) clearInterval(disconnectCheckInterval);
       if (turnTimeoutId) clearTimeout(turnTimeoutId);
       if (countdownInterval) clearInterval(countdownInterval);
+      window.removeEventListener('beforeunload', leaveRoom);
     };
   }, []);
 
   return (
     <div className="container">
       <h1 id="mp-title">Multiplayer</h1>
-      <p className="subtitle" id="mp-subtitle">Compete with a friend in real time</p>
+      <p className="subtitle" id="mp-subtitle">Compete with up to 9 friends in real time</p>
 
       <div id="mp-loading">Loading...</div>
 
       <div id="mp-lobby">
-        {/* Language picker visible to everyone before joining */}
         <div className="field">
           <label htmlFor="mp-langSelect" id="mp-lobby-lang-label">Language</label>
           <select id="mp-langSelect">
@@ -1249,11 +1366,38 @@ export default function Multiplayer() {
         </div>
       </div>
 
+      {/* WAITING SCREEN */}
       <div id="mp-waiting" className="hidden">
-        <div className="spinner" style={{ margin: '2rem auto' }} />
-        <p id="mp-waiting-msg">Waiting...</p>
+        <div id="mp-waiting-content" style={{ maxWidth: '480px', margin: '0 auto' }}>
+          <h2 id="mp-waiting-title" style={{ textAlign: 'center', marginBottom: '0.5rem' }}>Waiting Room</h2>
+          <p id="mp-room-info" style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '1.5rem' }}>Room code: —</p>
+          
+          <div id="mp-profile-editor" style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem' }}>
+            <div className="field" style={{ marginBottom: '0.5rem' }}>
+              <label htmlFor="mp-nickname-input" id="mp-nickname-label">Nickname</label>
+              <input type="text" id="mp-nickname-input" maxLength={15} placeholder="Your name" />
+            </div>
+            <div className="field" style={{ marginBottom: '0.5rem' }}>
+              <label id="mp-color-label">Color</label>
+              <div id="mp-color-picker" style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}></div>
+            </div>
+            <button className="btn-secondary" id="btn-save-profile" style={{ width: '100%' }}>Save</button>
+          </div>
+
+          <div id="mp-players-list" style={{ marginBottom: '1.5rem' }}></div>
+
+          <div id="mp-host-controls" className="hidden">
+            <button className="btn-primary" id="btn-start-game" style={{ width: '100%' }}>Start Game</button>
+            <p id="mp-start-error" style={{ color: '#f87171', textAlign: 'center', fontSize: '0.85rem', marginTop: '0.5rem' }}></p>
+          </div>
+
+          <div id="mp-guest-message" className="hidden" style={{ textAlign: 'center', color: '#94a3b8', padding: '1rem' }}>
+            Waiting for host to start the game...
+          </div>
+        </div>
       </div>
 
+      {/* GAME SCREEN */}
       <div id="mp-game" className="hidden">
         <nav className="lang-nav">
           <button data-lang="en" className="lang-btn active">EN</button>
@@ -1261,42 +1405,9 @@ export default function Multiplayer() {
           <button data-lang="it" className="lang-btn">IT</button>
         </nav>
 
-        <div className="hud">
-          <div className="badge">
-            <span className="label" id="mp-game-you-label">You</span> <span id="mp-my-score">0</span>
-          </div>
-          <div className="badge">
-            <span className="label" id="mp-game-opp-label">Opponent</span> <span id="mp-opp-score">0</span>
-          </div>
-        </div>
-
-        <div id="mp-race-track" className="race-track">
-          <div className="race-header">
-            <span className="race-label race-label--me">
-              <span id="mp-race-me-label">You</span>
-              <span id="mp-race-me-score" className="race-score">0</span>
-            </span>
-            <span id="mp-race-title" style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              🏁 Race to History Glory
-            </span>
-            <span className="race-label race-label--opp">
-              <span id="mp-race-opp-label">Opp</span>
-              <span id="mp-race-opp-score" className="race-score">0</span>
-            </span>
-          </div>
-
-          <div className="race-bar-outer">
-            <div className="race-bar-inner">
-              <div id="mp-race-me-fill" className="race-fill race-fill--me" style={{ width: '50%' }} />
-              <div id="mp-race-center" className="race-center" style={{ left: '50%' }}>
-                <span id="mp-race-center-icon" className="race-center-icon">⚖️</span>
-                <span id="mp-race-center-diff" className="race-center-diff">0</span>
-              </div>
-              <div id="mp-race-opp-fill" className="race-fill race-fill--opp" style={{ width: '50%' }} />
-            </div>
-          </div>
-
-          <div id="mp-race-lead-msg" className="race-lead-msg">Tied — every point counts!</div>
+        <div id="mp-leaderboard" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '0.75rem', marginBottom: '1rem', maxHeight: '200px', overflowY: 'auto' }}>
+          <div id="mp-leaderboard-title" style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.05em', marginBottom: '0.5rem', textAlign: 'center' }}>Leaderboard</div>
+          <div id="mp-leaderboard-body"></div>
         </div>
 
         <div id="mp-round" style={{ textAlign: 'center', fontWeight: 700, color: '#94a3b8', marginBottom: '0.5rem' }} />
@@ -1305,18 +1416,19 @@ export default function Multiplayer() {
 
         <div className="cards">
           <div className="card" id="mp-cardA">
-            <div id="mp-loadingA" style={{ display: 'none', marginBottom: '0.5rem' }} ><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
+            <div id="mp-loadingA" style={{ display: 'none', marginBottom: '0.5rem' }}><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
             <h2 id="mp-nameA" />
             <p id="mp-descA" />
           </div>
           <div className="card" id="mp-cardB">
-            <div id="mp-loadingB" style={{ display: 'none', marginBottom: '0.5rem' }} ><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
+            <div id="mp-loadingB" style={{ display: 'none', marginBottom: '0.5rem' }}><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
             <h2 id="mp-nameB" />
             <p id="mp-descB" />
           </div>
         </div>
       </div>
 
+      {/* RESULT OVERLAY */}
       <div id="mp-result-overlay" className="win-overlay hidden">
         <div className="win-content" style={{ maxWidth: '480px' }}>
           <div id="mp-result-pair" style={{ marginBottom: '1.5rem' }} />
@@ -1329,12 +1441,7 @@ export default function Multiplayer() {
             textAlign: 'center'
           }} />
           
-          <div id="mp-opp-result" style={{ 
-            padding: '0.75rem', 
-            borderRadius: '12px', 
-            border: '2px solid',
-            textAlign: 'center'
-          }} />
+          <div id="mp-round-leaderboard" style={{ marginBottom: '1rem' }}></div>
           
           <div id="mp-next-round" style={{ marginTop: '1.5rem', color: '#94a3b8', fontSize: '0.9rem' }}>
             Next round starting soon...
@@ -1343,9 +1450,10 @@ export default function Multiplayer() {
         </div>
       </div>
 
+      {/* DISCONNECT / ROOM CLOSED OVERLAY */}
       <div id="mp-disconnect" className="win-overlay hidden">
         <div className="win-content">
-          <div className="win-trophy">🏃</div>
+          <div id="mp-disconnect-icon" style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🚪</div>
           <h2 className="win-title" id="mp-disconnect-title" />
           <p id="mp-disconnect-subtitle" style={{ fontSize: '1.1rem', color: '#e2e8f0', margin: '0.5rem 0' }} />
           <p id="mp-disconnect-msg" style={{ fontSize: '1rem', color: '#94a3b8', margin: '1rem 0' }} />
@@ -1353,12 +1461,12 @@ export default function Multiplayer() {
         </div>
       </div>
 
+      {/* WINNER / FINAL STANDINGS */}
       <div id="mp-winner" className="win-overlay hidden">
-        <div className="win-content">
-          <div className="win-trophy">🏆</div>
-          <h2 className="win-title" id="mp-winner-text" />
-          <p id="mp-winner-msg" style={{ fontSize: '1.1rem', color: '#e2e8f0', margin: '1rem 0' }} />
-          <div id="mp-winner-scores" style={{ fontSize: '2rem', fontWeight: 800, color: '#fbbf24', marginBottom: '1rem' }} />
+        <div className="win-content" style={{ maxWidth: '520px' }}>
+          <h2 className="win-title" id="mp-winner-text" style={{ marginBottom: '1rem' }}>Final Standings</h2>
+          
+          <div id="mp-standings" style={{ marginBottom: '1.5rem', width: '100%' }}></div>
           
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem' }}>
             <button className="btn-primary" id="btn-play-again">Restart game</button>

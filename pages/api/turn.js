@@ -32,7 +32,26 @@ function calculatePoints(a, b, isCorrect) {
   return 0;
 }
 
-const TURN_TIMEOUT_MS = 45000; // 45 seconds.
+const TURN_TIMEOUT_MS = 45000;
+
+function getActivePlayers(players, heartbeats) {
+  const now = Date.now();
+  return (players || []).filter((p) => {
+    const lastBeat = heartbeats?.[p.id] ? new Date(heartbeats[p.id]).getTime() : null;
+    return lastBeat ? (now - lastBeat) < 60000 : false;
+  });
+}
+
+function buildStandings(scores, players) {
+  const list = (players || []).map((p) => ({
+    id: p.id,
+    nickname: p.nickname || 'Guest',
+    color: p.color || '#94a3b8',
+    score: scores?.[p.id] || 0,
+  }));
+  list.sort((a, b) => b.score - a.score);
+  return list;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
@@ -55,14 +74,14 @@ export default async function handler(req, res) {
   const b = pair[1];
   const earlierId = getTime(a) < getTime(b) ? a.id : b.id;
 
-let answered;
-try {
-  answered = JSON.parse(room.answered || '{}');
-} catch {
-  answered = room.answered || {};
-  if (!answered || typeof answered !== 'object' || Array.isArray(answered)) answered = {};
-}
-if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Already answered' });
+  let answered;
+  try {
+    answered = JSON.parse(room.answered || '{}');
+  } catch {
+    answered = room.answered || {};
+    if (!answered || typeof answered !== 'object' || Array.isArray(answered)) answered = {};
+  }
+  if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Already answered' });
 
   const scores = { ...(room.scores || {}) };
 
@@ -70,7 +89,6 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
   let points = 0;
 
   if (choice === 'timeout') {
-    // Player was auto-marked as timed out by the client-side timer
     answered[playerId] = { choice: null, isCorrect: false, points: 0, timedOut: true };
   } else if (!choice) {
     return res.status(400).json({ error: 'Missing choice' });
@@ -81,9 +99,15 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
     answered[playerId] = { choice, isCorrect, points };
   }
 
-  const hostId = room.host;
-  const bId = room.player_b;
-  const allAnswered = bId ? Object.keys(answered).length === 2 : Object.keys(answered).length === 1;
+  const players = room.players || [];
+  const activePlayers = getActivePlayers(players, room.heartbeats);
+  const activeIds = new Set(activePlayers.map((p) => p.id));
+
+  const roundStart = room.round_started_at ? new Date(room.round_started_at).getTime() : Date.now();
+  const deadlinePassed = (Date.now() - roundStart) >= TURN_TIMEOUT_MS;
+
+  const answeredActiveCount = Object.keys(answered).filter((id) => activeIds.has(id)).length;
+  const allAnswered = answeredActiveCount >= activePlayers.length || deadlinePassed;
 
   let nextPair = pair;
   let round = room.current_round || 0;
@@ -93,17 +117,22 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
 
   let lastResult = null;
   let nextRoundAt = null;
-
   let shownPairsToSave = null;
+  let roundStartedAt = room.round_started_at;
 
   if (allAnswered) {
-    // Only update scores when BOTH players have answered, so both clients
-    // see the score change coincide with the result overlay.
+    // Auto-mark any missing active players as timed out
+    activePlayers.forEach((p) => {
+      if (answered[p.id] === undefined) {
+        answered[p.id] = { choice: null, isCorrect: false, points: 0, timedOut: true };
+      }
+    });
+
+    // Update scores for everyone
     Object.entries(answered).forEach(([pid, ans]) => {
       scores[pid] = (scores[pid] || 0) + ans.points;
     });
 
-    // Determine which event was earlier
     const earlier = getTime(a) < getTime(b) ? a : b;
 
     // Fetch fun_fact for the earlier event directly from DB
@@ -128,25 +157,32 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
     }
 
     // Build result summary for the round that just ended
+    const perPlayerResults = {};
+    players.forEach((p) => {
+      perPlayerResults[p.id] = {
+        ...answered[p.id],
+        nickname: p.nickname,
+        color: p.color,
+      };
+    });
+
     lastResult = {
       pair: [a, b],
       earlier,
-      answered: { ...answered },
+      answered: perPlayerResults,
       scores: { ...scores },
       round,
       fun_fact: funFact,
     };
-    // Extend result display to 10 seconds if there's a fun fact, so players have time to read it
+
     const resultDisplayMs = funFact ? 10000 : 3500;
     nextRoundAt = new Date(Date.now() + resultDisplayMs).toISOString();
+    roundStartedAt = new Date(Date.now() + resultDisplayMs).toISOString();
 
     if (round > totalRounds) {
       state = 'finished';
-      const hostScore = scores[hostId] || 0;
-      const bScore = scores[bId] || 0;
-      if (hostScore > bScore) winner = { id: hostId, score: hostScore, badge: '🏆' };
-      else if (bScore > hostScore) winner = { id: bId, score: bScore, badge: '🏆' };
-      else winner = { id: null, score: hostScore, badge: '🤝' };
+      const standings = buildStandings(scores, players);
+      winner = standings; // full array of {id, nickname, color, score}
     }
   }
 
@@ -158,6 +194,7 @@ if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Alre
     winner,
     last_result: lastResult,
     next_round_at: nextRoundAt,
+    round_started_at: roundStartedAt,
     ...(shownPairsToSave ? { shown_pairs: shownPairsToSave } : {}),
   };
   if (allAnswered) {

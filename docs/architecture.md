@@ -7,7 +7,7 @@ flowchart TB
     subgraph Client["Browser (2+ players)"]
         A["Next.js Pages Router"]
         A --> SP["/ (Single Player)"]
-        A --> MP["/multiplayer"]
+        A --> MP["/multiplayer (2-10 players)"]
         A --> API["/api/*"]
     end
 
@@ -41,37 +41,53 @@ flowchart TB
 ```mermaid
 sequenceDiagram
     actor Host
-    actor Guest
+    actor Guest1
+    actor Guest2
     participant API as /api/room
     participant Turn as /api/turn
     participant DB as rooms table
     participant RT as Supabase Realtime
 
-    Note over Host, Guest: Lobby Phase
+    Note over Host, Guest2: Lobby Phase
     Host->>API: create(filters, rounds, lang)
-    API->>DB: INSERT room(code, host, events, current_pair, scores)
+    API->>DB: INSERT room(code, players=[{host}], state='lobby')
     API-->>Host: room.code
-    Guest->>API: join(code, lang)
-    API->>DB: UPDATE player_b, state='playing'
-    API-->>Guest: room
+    Guest1->>API: join(code, lang)
+    API->>DB: UPDATE players += guest1
+    API-->>Guest1: room
+    Guest2->>API: join(code, lang)
+    API->>DB: UPDATE players += guest2
+    API-->>Guest2: room
 
-    Note over Host, Guest: Round 1 — Both Answer
+    Note over Host, Guest2: Host Starts Game
+    Host->>API: start(code, playerId)
+    API->>DB: UPDATE state='playing', scores, current_pair
+    API-->>Host: room
+
+    Note over Host, Guest2: Round 1 — All Answer
     Host->>Turn: submit(roomId, choice='A')
     Turn->>DB: UPDATE answered[host] = {...}
     Turn-->>Host: {ok, waiting}
-    Guest->>Turn: submit(roomId, choice='B')
-    Turn->>DB: UPDATE scores+=points, last_result={...},<br/>current_pair=new, answered={}
-    Turn-->>Guest: {ok, allAnswered}
+    Guest1->>Turn: submit(roomId, choice='B')
+    Turn->>DB: UPDATE answered[guest1] = {...}
+    Turn-->>Guest1: {ok, waiting}
+    Guest2->>Turn: submit(roomId, choice='A')
+    Turn->>DB: UPDATE scores+=points, last_result={...}, current_pair=new, answered={}
+    Turn-->>Guest2: {ok, allAnswered}
 
-    Note over Host, Guest: Result Phase (3.5s)
+    Note over Host, Guest2: Result Phase (3.5s)
     DB->>RT: broadcast UPDATE
     RT-->>Host: last_result + new current_pair
-    RT-->>Guest: last_result + new current_pair
-    Host->>Host: show overlay + freeze tracker
-    Guest->>Guest: show overlay + freeze tracker
-    Note over Host, Guest: 3.5s timer
-    Host->>Host: hide overlay + animate tracker
-    Guest->>Guest: hide overlay + animate tracker
+    RT-->>Guest1: last_result + new current_pair
+    RT-->>Guest2: last_result + new current_pair
+    Host->>Host: show overlay + leaderboard
+    Guest1->>Guest1: show overlay + leaderboard
+    Guest2->>Guest2: show overlay + leaderboard
+    Note over Host, Guest2: 3.5s timer (10s if fun fact)
+    Host->>Host: hide overlay, next round
+    Guest1->>Guest1: hide overlay, next round
+    Guest2->>Guest2: hide overlay, next round
+```
 ```
 
 ---
@@ -132,18 +148,20 @@ erDiagram
     ROOMS {
         int id PK
         varchar code
-        varchar host
-        varchar player_b
-        varchar state
+        jsonb players
         jsonb scores
         jsonb streaks
         jsonb answered
         jsonb last_result
         jsonb events
         jsonb current_pair
+        jsonb shown_pairs
+        jsonb heartbeats
         int current_round
         int total_rounds
+        timestamptz round_started_at
         varchar next_round_at
+        varchar state
     }
 
     EVENTS ||--o{ EVENT_TRANSLATIONS : "translated to"
@@ -156,10 +174,11 @@ erDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> lobby : createRoom()
-    lobby --> playing : joinRoom()
+    lobby --> playing : startGame() [host]
     playing --> playing : submitAnswer()
     playing --> finished : round > total_rounds
-    finished --> [*] : playAgain / reload
+    finished --> lobby : playAgain (all ready)
+    lobby --> [*] : host leaves
 ```
 
 ---
@@ -176,8 +195,8 @@ flowchart TD
     D --> G["Store in answered[playerId]"]
     E --> G
     F --> G
-    G --> H{"Both answered?"}
-    H -->|Yes| I["Atomically:<br/>1. Add both scores<br/>2. Pick new pair<br/>3. Set last_result<br/>4. Clear answered"]
+    G --> H{"All active players answered OR 45s deadline passed?"}
+    H -->|Yes| I["Atomically:<br/>1. Add all scores<br/>2. Auto-timeout missing players<br/>3. Pick new pair<br/>4. Set last_result<br/>5. Clear answered"]
     H -->|No| J["UPDATE answered only"]
     I --> K["Broadcast via Realtime"]
     J --> K
@@ -287,11 +306,12 @@ This guarantees:
 ```
 pages/
 ├── index.js              # Single-player game
-├── multiplayer.js        # Multiplayer lobby + game UI
+├── multiplayer.js        # Multiplayer lobby (2-10 players) + game UI + leaderboard
 ├── api/
-│   ├── room.js           # create / join / clear-result
-│   ├── turn.js           # submit answer + calculate score
-│   └── translate.js      # DeepL proxy + Supabase cache. Fetches short_name with description context, description/fun_fact plain.
+│   ├── room.js           # create / join / update-profile / start / restart / leave / heartbeat
+│   ├── turn.js           # submit answer + calculate score + 45s deadline
+│   ├── finish.js         # force finish + build full standings
+│   └── translate.js      # DeepL proxy + Supabase cache
 ```
 
 ---

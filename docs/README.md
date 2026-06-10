@@ -17,12 +17,11 @@ Welcome to the **History Game** documentation! This folder contains all technica
 ### Features
 
 - **Single-player mode** — practice against the clock
-- **Multiplayer mode** — real-time 1v1 matches with lobby, room codes, and live scoring
-- **Event filtering** — filter by year range, region, and country
+## Multiplayer mode — real-time matches with lobby, room codes, and live scoring (2-10 players)
 - **Live updates** — powered by Supabase Realtime
 - **Language support** — English, Czech, Italian (extensible via DeepL)
 - **Fun facts** — learn something new after each round
-- **Disconnect detection** — server-side heartbeats detect opponent dropouts
+- **Disconnect detection** — server-side heartbeats detect player dropouts
 
 ## Quick Start
 

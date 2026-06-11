@@ -1088,8 +1088,12 @@ export default function Multiplayer() {
         document.getElementById('mp-descA').style.display = 'none';
         document.getElementById('mp-nameB').style.display = 'none';
         document.getElementById('mp-descB').style.display = 'none';
-        cardA.classList.add('disabled');
-        cardB.classList.add('disabled');
+        // Don't add .disabled during translation if user already picked
+        const ans = room.answered || {};
+        if (!ans[playerId]) {
+          cardA.classList.add('disabled');
+          cardB.classList.add('disabled');
+        }
         document.getElementById('mp-status').textContent = t('loading');
       }
 
@@ -1102,6 +1106,12 @@ export default function Multiplayer() {
         document.getElementById('mp-descA').style.display = '';
         document.getElementById('mp-nameB').style.display = '';
         document.getElementById('mp-descB').style.display = '';
+        // Remove disabled only if user hasn't picked yet
+        const ans = room.answered || {};
+        if (!ans[playerId]) {
+          cardA.classList.remove('disabled');
+          cardB.classList.remove('disabled');
+        }
       }
 
       const a = pair[0];
@@ -1138,18 +1148,33 @@ export default function Multiplayer() {
           turnTimeoutId = null;
         }
 
+        // Reset any leftover picked/unpicked from previous round
+        document.getElementById('mp-cardA').classList.remove('picked', 'unpicked');
+        document.getElementById('mp-cardB').classList.remove('picked', 'unpicked');
+
         if (myAns) {
+          // User already answered this round — show picked/unpicked states persistently
           document.getElementById('mp-status').textContent = t('waitingOpp');
-          document.getElementById('mp-cardA').classList.add('disabled');
-          document.getElementById('mp-cardB').classList.add('disabled');
+          const chosenSide = myAns.choice;
+          if (chosenSide === 'A') {
+            document.getElementById('mp-cardA').classList.add('picked');
+            document.getElementById('mp-cardB').classList.add('unpicked');
+          } else if (chosenSide === 'B') {
+            document.getElementById('mp-cardB').classList.add('picked');
+            document.getElementById('mp-cardA').classList.add('unpicked');
+          } else {
+            // timeout or no choice — both grey out
+            document.getElementById('mp-cardA').classList.add('unpicked');
+            document.getElementById('mp-cardB').classList.add('unpicked');
+          }
         } else {
           const deadline = Date.now() + 45000;
           const updateCountdown = () => {
             const remaining = Math.ceil((deadline - Date.now()) / 1000);
             if (remaining <= 0) {
               document.getElementById('mp-status').textContent = t('waitingOpp');
-              document.getElementById('mp-cardA').classList.add('disabled');
-              document.getElementById('mp-cardB').classList.add('disabled');
+              document.getElementById('mp-cardA').classList.add('unpicked');
+              document.getElementById('mp-cardB').classList.add('unpicked');
               clearInterval(countdownInterval);
               countdownInterval = null;
               return;
@@ -1164,8 +1189,8 @@ export default function Multiplayer() {
               guess('timeout');
             }
           }, 45000);
-          document.getElementById('mp-cardA').classList.remove('disabled');
-          document.getElementById('mp-cardB').classList.remove('disabled');
+          document.getElementById('mp-cardA').classList.remove('disabled', 'picked', 'unpicked');
+          document.getElementById('mp-cardB').classList.remove('disabled', 'picked', 'unpicked');
         }
       }
     }
@@ -1258,9 +1283,12 @@ export default function Multiplayer() {
       const ans = room.answered || {};
       if (ans[playerId]) return;
 
-      document.getElementById('mp-status').textContent = t('sending');
-      document.getElementById('mp-cardA').classList.add('disabled');
-      document.getElementById('mp-cardB').classList.add('disabled');
+      // Visual feedback immediately
+      const pickedCard = document.getElementById(side === 'A' ? 'mp-cardA' : 'mp-cardB');
+      const otherCard = document.getElementById(side === 'A' ? 'mp-cardB' : 'mp-cardA');
+      pickedCard.classList.add('picked');
+      otherCard.classList.add('unpicked');
+      document.getElementById('mp-status').textContent = t('waitingOpp');
 
       try {
         const res = await fetch('/api/turn', {
@@ -1272,14 +1300,14 @@ export default function Multiplayer() {
           const err = await res.json();
           document.getElementById('mp-status').textContent = (err.error || 'Unknown');
           if (!ans[playerId]) {
-            document.getElementById('mp-cardA').classList.remove('disabled');
-            document.getElementById('mp-cardB').classList.remove('disabled');
+            pickedCard.classList.remove('picked');
+            otherCard.classList.remove('unpicked');
           }
         }
       } catch (err) {
         document.getElementById('mp-status').textContent = t('networkError');
-        document.getElementById('mp-cardA').classList.remove('disabled');
-        document.getElementById('mp-cardB').classList.remove('disabled');
+        pickedCard.classList.remove('picked');
+        otherCard.classList.remove('unpicked');
       }
     }
 
@@ -1430,11 +1458,13 @@ export default function Multiplayer() {
 
         <div className="cards">
           <div className="card" id="mp-cardA">
+            <div className="card-check" id="mp-checkA">✓</div>
             <div id="mp-loadingA" style={{ display: 'none', marginBottom: '0.5rem' }}><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
             <h2 id="mp-nameA" />
             <p id="mp-descA" />
           </div>
           <div className="card" id="mp-cardB">
+            <div className="card-check" id="mp-checkB">✓</div>
             <div id="mp-loadingB" style={{ display: 'none', marginBottom: '0.5rem' }}><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
             <h2 id="mp-nameB" />
             <p id="mp-descB" />

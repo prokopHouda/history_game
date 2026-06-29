@@ -28,6 +28,8 @@ Parse the request for:
 - **timeframe** (optional) — e.g. "1800s", "before 1500", "20th century", "ancient"
 - **theme** (optional) — e.g. "science", "wars", "exploration"
 
+When the user says a country name (e.g. "China", "Japan"), map it to its **ISO 3166-1 alpha-2 code** (`CN`, `JP`) for the `countries` column. The user speaks in country names; the database stores codes.
+
 If the user gives only a count with no scope, pick a region/era that broadens coverage. Query `events` first to see which regions/eras are underrepresented, then propose events that fill gaps.
 
 ## ⚠️ Critical Rule — NEVER add duplicate events
@@ -63,7 +65,7 @@ $hdr = @{
 | `short_name`  | text         | **yes**            | English title, used for dedupe. Keep it unique and descriptive. |
 | `year`        | integer      | **yes**            | **Integer, not text.** e.g. `618`, not `"618"`. |
 | `description` | text         | **yes**            | English description (1-3 sentences). |
-| `countries`   | text         | recommended        | Comma-separated, e.g. `"China, Mongolia"`. Drives the country filter. |
+| `countries`   | text         | recommended        | **Comma-separated ISO 3166-1 alpha-2 codes (UPPERCASE)**, e.g. `"CN, MN"` — NOT full country names. Drives the country filter. See code table below. |
 | `region`      | text         | recommended        | One of: `Europe`, `Asia`, `Africa`, `Americas`, `Oceania`, `World`. Drives the region filter. |
 | `fun_fact`    | text         | recommended        | Short trivia shown after a correct answer. Improves player experience. |
 | `year_int`    | integer      | **never insert**   | **Generated column** derived from `year`. Writing it throws `428C9: cannot insert a non-DEFAULT value into column "year_int"`. |
@@ -77,11 +79,46 @@ $hdr = @{
   "short_name": "Tang Dynasty Established",
   "year": 618,
   "description": "The Tang dynasty is founded...",
-  "countries": "China",
+  "countries": "CN",
   "region": "Asia",
   "fun_fact": "Chang'an was likely the largest city in the world..."
 }
 ```
+
+### `countries` — ISO 3166-1 alpha-2 codes (UPPERCASE, comma-separated)
+
+**Never use full country names.** The `countries` column stores comma-separated ISO alpha-2 codes in uppercase, e.g. `"CN, MN"`. This drives the in-game country filter. Common codes you'll likely need:
+
+| Country | Code | | Country | Code | | Country | Code |
+|---------|------|---|---------|------|---|---------|------|
+| China | `CN` | | Japan | `JP` | | India | `IN` |
+| Korea (North/South) | `KR` | | Mongolia | `MN` | | Iran | `IR` |
+| Philippines | `PH` | | Pakistan | `PK` | | Indonesia | `ID` |
+| Vietnam | `VN` | | Thailand | `TH` | | Cambodia | `KH` |
+| Laos | `LA` | | Myanmar | `MM` | | Malaysia | `MY` |
+| Singapore | `SG` | | Timor-Leste | `TL` | | Bangladesh | `BD` |
+| Sri Lanka | `LK` | | Nepal | `NP` | | Afghanistan | `AF` |
+| Iraq | `IQ` | | Turkey | `TR` | | Saudi Arabia | `SA` |
+| Israel | `IL` | | Egypt | `EG` | | Ethiopia | `ET` |
+| South Africa | `ZA` | | Nigeria | `NG` | | Kenya | `KE` |
+| Morocco | `MA` | | Ghana | `GH` | | Tunisia | `TN` |
+| Algeria | `DZ` | | Tanzania | `TZ` | | Cameroon | `CM` |
+| USA | `US` | | Canada | `CA` | | Mexico | `MX` |
+| Brazil | `BR` | | Argentina | `AR` | | Chile | `CL` |
+| Colombia | `CO` | | Peru | `PE` | | Cuba | `CU` |
+| UK | `GB` | | France | `FR` | | Germany | `DE` |
+| Italy | `IT` | | Spain | `ES` | | Portugal | `PT` |
+| Netherlands | `NL` | | Belgium | `BE` | | Switzerland | `CH` |
+| Austria | `AT` | | Poland | `PL` | | Russia | `RU` |
+| Czechia | `CZ` | | Slovakia | `SK` | | Hungary | `HU` |
+| Croatia | `HR` | | Serbia | `RS` | | Bosnia | `BA` |
+| Montenegro | `ME` | | Slovenia | `SI` | | Lithuania | `LT` |
+| Ireland | `IE` | | Denmark | `DK` | | Sweden | `SE` |
+| Norway | `NO` | | Finland | `FI` | | Greece | `GR` |
+| Romania | `RO` | | Bulgaria | `BG` | | Ukraine | `UA` |
+| Australia | `AU` | | New Zealand | `NZ` | | Papua New Guinea | `PG` |
+
+For countries not in this table, look up the ISO 3166-1 alpha-2 code before generating the payload. Use the official code in uppercase. Multi-country events use comma-separated codes: `"CN, MN"`, `"IN, PK"`, `"CZ, SK"`.
 
 ## Translations are automatic — do NOT insert them
 
@@ -112,7 +149,7 @@ Generate `count` candidate events fitting the user's scope. For each event, prov
 - `short_name` — must NOT match any existing `short_name`
 - `year` — integer
 - `description` — factual, 1-3 sentences
-- `countries` — comma-separated
+- `countries` — **comma-separated ISO 3166-1 alpha-2 codes (UPPERCASE)**, e.g. `"CN, MN"`. Never full country names. See the code table above.
 - `region` — one of the canonical values
 - `fun_fact` — short trivia
 
@@ -189,6 +226,7 @@ If the user pasted the secret key in chat, remind them to rotate it in Supabase 
 - [ ] Queried existing `short_name` values for the target region
 - [ ] Proposed events presented to user for approval
 - [ ] No `short_name` duplicates with existing rows
+- [ ] `countries` uses ISO 3166-1 alpha-2 codes (UPPERCASE), not full country names
 - [ ] Payload uses `year` as integer, omits `year_int` and `date`
 - [ ] Explicit `id` values (max+1, max+2, ...)
 - [ ] Insert succeeded, rows verified

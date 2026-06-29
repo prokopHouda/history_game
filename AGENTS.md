@@ -24,6 +24,10 @@
 
 ## Data model (Supabase)
 - **`events` table**: `id, short_name, date, year, description, countries, region`
+  - `id` is **not auto-increment** — explicit value required on insert
+  - `year` is an **integer** column (not text)
+  - `year_int` is a **generated column** derived from `year` — never write to it
+  - `date` is a real `date` type (nullable); most rows leave it `null`
 - **`event_translations` table**: `event_id, lang, short_name, description` — populated lazily via `/api/translate`
 - **`rooms` table** (multiplayer): `id, code, host, player_b, state, events, current_pair, scores, streaks, current_round, answered, winner, shown_pairs, heartbeats, created_at/updated_at`
   - Migration: `database/00_create_rooms.sql` — must be run manually in Supabase SQL Editor

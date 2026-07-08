@@ -2,7 +2,7 @@
 
 ## Project overview
 - **Stack**: Next.js 16 (Pages Router), React 19, Supabase JS client, DeepL translation API
-- **Single-page game**: Single-player UI lives in `pages/index.js` (React state + components). Multiplayer (`pages/multiplayer.js`) still uses raw DOM manipulation inside a `useEffect`.
+- **Single-page game**: Single-player UI lives in `pages/index.js` (React state + components). Multiplayer (`pages/multiplayer.js`) also uses React state + components with realtime subscriptions.
 - **Deployed on Vercel** with connected GitHub repo `prokopHouda/history_game`
 - **Local source folder**: `C:\Users\proko\history-game` (NOT `Documents\history_game`)
 
@@ -73,6 +73,6 @@ Static UI strings are inline in `pages/index.js`. Event data is translated via `
 
 ## Important conventions
 - **Never** commit secrets. `.env*` is gitignored. Only public keys in `.env.local`.
-- Single-player (`pages/index.js`) uses React state + components. Multiplayer (`pages/multiplayer.js`) uses raw DOM manipulation inside a `useEffect` (not React state). Changing multiplayer to React state would require a significant refactor.
+- Single-player (`pages/index.js`) and multiplayer (`pages/multiplayer.js`) both use React state + components. Multiplayer uses `useRef` for flow-control variables and `useEffect` for realtime subscriptions, heartbeat intervals, and turn timers.
 - The `events` and `event_translations` tables are managed in Supabase dashboard; no migrations or seed scripts exist in the repo.
 

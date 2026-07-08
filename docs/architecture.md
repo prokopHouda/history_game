@@ -310,18 +310,29 @@ The single-player game also uses `pickPair` with an in-memory `Set` (reset on ea
 ```
 pages/
 ├── index.js              # Single-player game (React state + components)
-├── multiplayer.js        # Multiplayer lobby (2-10 players) + game UI + leaderboard
+├── multiplayer.js        # Multiplayer (React state + components, realtime subscriptions)
 ├── api/
 │   ├── room.js           # create / join / update-profile / start / restart / leave / heartbeat
 │   ├── turn.js           # submit answer + calculate score + 45s deadline
 │   ├── finish.js         # force finish + build full standings
 │   └── translate.js      # DeepL proxy + Supabase cache
 components/
-├── SettingsPanel.js      # Filter form (year/region/country/lang + pool counter)
-├── GameCard.js           # Event card (name, desc, meta, click/keyboard, states)
-├── StreakBar.js          # Progress bar + milestone text
-├── Hud.js                # Score + streak badges
-└── LangNav.js            # EN/CS/IT language buttons
+├── SettingsPanel.js      # SP: filter form (year/region/country/lang + pool counter)
+├── GameCard.js           # SP: event card (name, desc, meta, click/keyboard, states)
+├── StreakBar.js          # SP: progress bar + milestone text
+├── Hud.js                # SP: score + streak badges
+├── LangNav.js            # Shared: EN/CS/IT language buttons
+├── Lobby.js              # MP: create/join room form (filters + rounds + room code)
+├── WaitingRoom.js        # MP: player list, profile editor, host start button
+├── GameScreen.js         # MP: cards + leaderboard + round info + status
+├── MpGameCard.js         # MP: card with check mark + loading spinner
+├── ResultOverlay.js     # MP: round result overlay (result + pair + fun fact + round leaderboard)
+├── FinalStandings.js     # MP: winner overlay with standings + restart/lobby buttons
+├── DisconnectOverlay.js  # MP: room closed overlay
+├── Leaderboard.js        # MP: in-game leaderboard (sorted players with scores)
+├── RoundLeaderboard.js   # MP: per-round results (correct/wrong/timeout + points)
+├── PlayerList.js         # MP: waiting room player list with color dots + host badges
+└── ColorPicker.js        # MP: color selection buttons for profile editor
 lib/
 ├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, MIN_GAP_YEARS=10)
 ├── eventTime.js          # Shared getEventYear() / getEventTime() — single source of truth for event dating
@@ -329,7 +340,8 @@ lib/
 ├── filters.js            # Shared filterEvents() + getUniqueRegionsAndCountries()
 ├── translate.js          # Shared ensureTranslated() / getText() — fetch + cache translations
 ├── onCardKey.js           # Shared keyboard handler factory (Enter/Space → click)
-└── milestones.js         # MILESTONES, getMilestone(), getNextMilestone()
+├── milestones.js         # MILESTONES, getMilestone(), getNextMilestone()
+└── mpColors.js           # DEFAULT_COLORS array for multiplayer player colors
 ```
 
 ---

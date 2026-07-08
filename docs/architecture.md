@@ -309,20 +309,27 @@ The single-player game also uses `pickPair` with an in-memory `Set` (reset on ea
 
 ```
 pages/
-├── index.js              # Single-player game
+├── index.js              # Single-player game (React state + components)
 ├── multiplayer.js        # Multiplayer lobby (2-10 players) + game UI + leaderboard
 ├── api/
 │   ├── room.js           # create / join / update-profile / start / restart / leave / heartbeat
 │   ├── turn.js           # submit answer + calculate score + 45s deadline
 │   ├── finish.js         # force finish + build full standings
 │   └── translate.js      # DeepL proxy + Supabase cache
+components/
+├── SettingsPanel.js      # Filter form (year/region/country/lang + pool counter)
+├── GameCard.js           # Event card (name, desc, meta, click/keyboard, states)
+├── StreakBar.js          # Progress bar + milestone text
+├── Hud.js                # Score + streak badges
+└── LangNav.js            # EN/CS/IT language buttons
 lib/
 ├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, MIN_GAP_YEARS=10)
 ├── eventTime.js          # Shared getEventYear() / getEventTime() — single source of truth for event dating
 ├── i18n.js               # Shared base UI text (10 keys × 3 langs) + makeT() accessor factory
 ├── filters.js            # Shared filterEvents() + getUniqueRegionsAndCountries()
 ├── translate.js          # Shared ensureTranslated() / getText() — fetch + cache translations
-└── onCardKey.js           # Shared keyboard handler factory (Enter/Space → click)
+├── onCardKey.js           # Shared keyboard handler factory (Enter/Space → click)
+└── milestones.js         # MILESTONES, getMilestone(), getNextMilestone()
 ```
 
 ---

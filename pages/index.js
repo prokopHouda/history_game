@@ -1,704 +1,466 @@
-import { useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import { pickPair } from '../lib/pickPair.js';
 import { getEventTime } from '../lib/eventTime.js';
 import { baseUiText, makeT } from '../lib/i18n.js';
-import { filterEvents, getUniqueRegionsAndCountries } from '../lib/filters.js';
+import { filterEvents } from '../lib/filters.js';
 import { ensureTranslated, getText } from '../lib/translate.js';
-import { onCardKey } from '../lib/onCardKey.js';
+import { MILESTONES } from '../lib/milestones.js';
+import SettingsPanel from '../components/SettingsPanel.js';
+import GameCard from '../components/GameCard.js';
+import StreakBar from '../components/StreakBar.js';
+import Hud from '../components/Hud.js';
+import LangNav from '../components/LangNav.js';
+
+const MIN_EVENTS = 25;
+
+const PAGE_UI = {
+  en: {
+    ...baseUiText.en,
+    title: 'Which happened earlier?',
+    subtitle: 'Pick the older historical event',
+    loading: 'Loading events from Supabase…',
+    settingsTitle: '⚙️ Game Settings',
+    startGame: 'Start Game',
+    streak: 'Streak',
+    streakProgress: '🔥 Rank Progress',
+    nextReward: 'Next rank',
+    milestone: 'Milestone',
+    reached: 'reached!',
+    correct: 'Correct!',
+    wrong: 'Wrong —',
+    earlierThan: 'was earlier than',
+    or: 'or',
+    next: 'Next →',
+    filters: '⚙️ Filters',
+    youWon: 'You Won!',
+    winSubtitle: 'You reached a streak of 50!',
+    eventsAvailable: 'events available',
+    needMore: 'Pick broader filters — need at least',
+    toPlay: 'to play',
+    year: 'Year',
+    preparing: 'Preparing next events…',
+    winRank: 'King of Historical Knowledge',
+    missingEnv: 'Missing Supabase env vars',
+    error: 'Error:',
+    crash: 'Crash:',
+    needEventsTable: 'Need at least 2 events in the table.',
+  },
+  cs: {
+    ...baseUiText.cs,
+    title: 'Co se stalo dříve?',
+    subtitle: 'Vyber starší historickou událost',
+    loading: 'Načítání událostí ze Supabase…',
+    settingsTitle: '⚙️ Nastavení hry',
+    startGame: 'Spustit hru',
+    streak: 'Série',
+    streakProgress: '🔥 Průběh hodnosti',
+    nextReward: 'Další hodnost',
+    milestone: 'Milník',
+    reached: 'dosažen!',
+    correct: 'Správně!',
+    wrong: 'Špatně —',
+    earlierThan: 'bylo dříve než',
+    or: 'nebo',
+    next: 'Další →',
+    filters: '⚙️ Filtry',
+    youWon: 'Vyhrál jsi!',
+    winSubtitle: 'Dosáhl jsi série 50!',
+    eventsAvailable: 'událostí k dispozici',
+    needMore: 'Vyber méně restriktivní filtry — potřebuješ alespoň',
+    toPlay: 'k hraní',
+    year: 'Rok',
+    preparing: 'Příprava dalších událostí…',
+    winRank: 'Král historických znalostí',
+    error: 'Chyba:',
+    crash: 'Pád:',
+    needEventsTable: 'V tabulce musí být alespoň 2 události.',
+    missingEnv: 'Chybí Supabase proměnné prostředí',
+  },
+  it: {
+    ...baseUiText.it,
+    title: 'Quale è avvenuto prima?',
+    subtitle: "Scegli l'evento storico più antico",
+    loading: 'Caricamento eventi da Supabase…',
+    settingsTitle: '⚙️ Impostazioni di gioco',
+    startGame: 'Inizia',
+    streak: 'Serie',
+    streakProgress: '🔥 Progresso grado',
+    nextReward: 'Prossimo grado',
+    milestone: 'Traguardo',
+    reached: 'raggiunto!',
+    correct: 'Corretto!',
+    wrong: 'Sbagliato —',
+    earlierThan: 'era prima di',
+    or: 'oppure',
+    next: 'Avanti →',
+    filters: '⚙️ Filtri',
+    youWon: 'Hai Vinto!',
+    winSubtitle: 'Hai raggiunto una serie di 50!',
+    eventsAvailable: 'eventi disponibili',
+    needMore: 'Allarga i filtri — servono almeno',
+    toPlay: 'per giocare',
+    year: 'Anno',
+    preparing: 'Preparazione prossimi eventi…',
+    winRank: 'Re della conoscenza storica',
+    error: 'Errore:',
+    crash: 'Errore critico:',
+    needEventsTable: 'Servono almeno 2 eventi nella tabella.',
+    missingEnv: 'Variabili d\'ambiente Supabase mancanti',
+  },
+};
 
 export default function Home() {
+  const [lang, setLang] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('gameLang') || 'en' : 'en'));
+  const [screen, setScreen] = useState('loading');
+  const [allEvents, setAllEvents] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [pair, setPair] = useState(null);
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [locked, setLocked] = useState(false);
+  const [lastResult, setLastResult] = useState(null);
+  const [feedback, setFeedback] = useState('');
+  const [guessState, setGuessState] = useState({ aState: '', bState: '' });
+  const [showNext, setShowNext] = useState(false);
+  const [celebration, setCelebration] = useState(null);
+  const [showWin, setShowWin] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
+  const [initError, setInitError] = useState(() => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_KEY) {
+      return 'Missing Supabase env vars';
+    }
+    return '';
+  });
+
+  const shownPairsRef = useRef(new Set());
+  const translationsRef = useRef({});
+  const lockedRef = useRef(false);
+  const celebrationTimeoutRef = useRef(null);
+  const winTimeoutRef = useRef(null);
+  const confettiBoxRef = useRef(null);
+
+  const { t } = makeT(PAGE_UI, () => lang);
+
+  const getLabel = useCallback((e) => {
+    return e.date ? e.date : `${t('year')} ${e.year}`;
+  }, [t]);
+
+  // Init: load events from Supabase
   useEffect(() => {
     const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_KEY;
 
     if (!SUPABASE_URL || !SUPABASE_KEY) {
-      document.getElementById('loading').textContent = 'Missing Supabase env vars';
-      return;
+      return; // initError stays as default empty, loading screen shows
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-    const MIN_EVENTS = 25;
 
-    let allEvents = [];
-    let events = [];
-    let a, b, earlierId;
-    let score = 0, streak = 0, locked = false;
-    let lastResult = null;
-    let translations = {};
-    let shownPairs = new Set();
-
-    const MILESTONES = {
-      5:  { name: 'History Noob',          badge: '🌱' },
-      10: { name: 'Time Traveler',         badge: '⏳' },
-      15: { name: 'History Buff',          badge: '📚' },
-      20: { name: 'Chronicle Keeper',      badge: '📜' },
-      25: { name: 'Timeline Warrior',      badge: '⚔️' },
-      30: { name: 'Century Sage',          badge: '🧙' },
-      35: { name: 'Era Conqueror',         badge: '🛡️' },
-      40: { name: 'Living Legend',         badge: '🔥' },
-      45: { name: 'Immortal Historian',    badge: '👑' },
-      50: { name: 'King of Historical Knowledge', badge: '🏆' }
-    };
-
-    function getMilestone(s) {
-      if (s >= 50) return MILESTONES[50];
-      const level = Math.floor(s / 5) * 5;
-      return MILESTONES[level] || null;
-    }
-
-    function getNextMilestone(s) {
-      if (s >= 50) return null;
-      const next = (Math.floor(s / 5) + 1) * 5;
-      return MILESTONES[next] || null;
-    }
-
-    const UI = {
-      en: {
-        ...baseUiText.en,
-        title: 'Which happened earlier?',
-        subtitle: 'Pick the older historical event',
-        loading: 'Loading events from Supabase…',
-        settingsTitle: '⚙️ Game Settings',
-        startGame: 'Start Game',
-        streak: 'Streak',
-        streakProgress: '🔥 Rank Progress',
-        nextReward: 'Next rank',
-        milestone: 'Milestone',
-        reached: 'reached!',
-        correct: 'Correct!',
-        wrong: 'Wrong —',
-        earlierThan: 'was earlier than',
-        or: 'or',
-        next: 'Next →',
-        filters: '⚙️ Filters',
-        youWon: 'You Won!',
-        winSubtitle: 'You reached a streak of 50!',
-        eventsAvailable: 'events available',
-        needMore: 'Pick broader filters — need at least',
-        toPlay: 'to play',
-        year: 'Year',
-        preparing: 'Preparing next events…',
-        winRank: 'King of Historical Knowledge',
-        missingEnv: 'Missing Supabase env vars',
-        error: 'Error:',
-        crash: 'Crash:',
-        needEventsTable: 'Need at least 2 events in the table.',
-      },
-      cs: {
-        ...baseUiText.cs,
-        title: 'Co se stalo dříve?',
-        subtitle: 'Vyber starší historickou událost',
-        loading: 'Načítání událostí ze Supabase…',
-        settingsTitle: '⚙️ Nastavení hry',
-        startGame: 'Spustit hru',
-        streak: 'Série',
-        streakProgress: '🔥 Průběh hodnosti',
-        nextReward: 'Další hodnost',
-        milestone: 'Milník',
-        reached: 'dosažen!',
-        correct: 'Správně!',
-        wrong: 'Špatně —',
-        earlierThan: 'bylo dříve než',
-        or: 'nebo',
-        next: 'Další →',
-        filters: '⚙️ Filtry',
-        youWon: 'Vyhrál jsi!',
-        winSubtitle: 'Dosáhl jsi série 50!',
-        eventsAvailable: 'událostí k dispozici',
-        needMore: 'Vyber méně restriktivní filtry — potřebuješ alespoň',
-        toPlay: 'k hraní',
-        year: 'Rok',
-        preparing: 'Příprava dalších událostí…',
-        winRank: 'Král historických znalostí',
-        error: 'Chyba:',
-        crash: 'Pád:',
-        needEventsTable: 'V tabulce musí být alespoň 2 události.',
-        missingEnv: 'Chybí Supabase proměnné prostředí',
-      },
-      it: {
-        ...baseUiText.it,
-        title: 'Quale è avvenuto prima?',
-        subtitle: "Scegli l'evento storico più antico",
-        loading: 'Caricamento eventi da Supabase…',
-        settingsTitle: '⚙️ Impostazioni di gioco',
-        startGame: 'Inizia',
-        streak: 'Serie',
-        streakProgress: '🔥 Progresso grado',
-        nextReward: 'Prossimo grado',
-        milestone: 'Traguardo',
-        reached: 'raggiunto!',
-        correct: 'Corretto!',
-        wrong: 'Sbagliato —',
-        earlierThan: 'era prima di',
-        or: 'oppure',
-        next: 'Avanti →',
-        filters: '⚙️ Filtri',
-        youWon: 'Hai Vinto!',
-        winSubtitle: 'Hai raggiunto una serie di 50!',
-        eventsAvailable: 'eventi disponibili',
-        needMore: 'Allarga i filtri — servono almeno',
-        toPlay: 'per giocare',
-        year: 'Anno',
-        preparing: 'Preparazione prossimi eventi…',
-        winRank: 'Re della conoscenza storica',
-        error: 'Errore:',
-        crash: 'Errore critico:',
-        needEventsTable: 'Servono almeno 2 eventi nella tabella.',
-        missingEnv: 'Variabili d\'ambiente Supabase mancanti',
-      }
-    };
-
-    function lang() {
-      return localStorage.getItem('gameLang') || 'en';
-    }
-
-    const { t } = makeT(UI, lang);
-
-    function updateLangNav() {
-      const current = lang();
-      document.querySelectorAll('.lang-btn').forEach((btn) => {
-        btn.classList.toggle('active', btn.dataset.lang === current);
-      });
-    }
-
-    async function changeLang(l) {
-      if (l === lang()) return;
-      localStorage.setItem('gameLang', l);
-      renderLabels();
-      updateLangNav();
-      if (a && b) {
-        const origA = events.find((e) => e.id === a.id) || a;
-        const origB = events.find((e) => e.id === b.id) || b;
-        const [ta, tb] = await maybeTranslate([origA, origB]);
-        if (lang() !== l) return;
-        a = ta; b = tb;
-        document.getElementById('nameA').textContent = a.short_name;
-        document.getElementById('descA').textContent = a.description;
-        document.getElementById('metaA').textContent = getLabel(a);
-        document.getElementById('nameB').textContent = b.short_name;
-        document.getElementById('descB').textContent = b.description;
-        document.getElementById('metaB').textContent = getLabel(b);
-        if (lastResult) {
-          lastResult.earlier = earlierId === a.id ? a : b;
-          lastResult.later = earlierId === a.id ? b : a;
-          const { earlier, later, isCorrect } = lastResult;
-          const fb = isCorrect
-            ? `${t('correct')} ${earlier.short_name}`
-            : `${t('wrong')} ${earlier.short_name} (${getLabel(earlier)}) ${t('earlierThan')} ${later.short_name} (${getLabel(later)}).`;
-          document.getElementById('feedback').textContent = fb;
-        }
-      }
-    }
-
-    function renderLabels() {
-      document.title = t('title');
-      const h1 = document.querySelector('h1');
-      if (h1) h1.textContent = t('title');
-      const subtitle = document.querySelector('.subtitle');
-      if (subtitle) subtitle.textContent = t('subtitle');
-      const loading = document.getElementById('loading');
-      if (loading) loading.textContent = t('loading');
-      const settingsH2 = document.querySelector('#settings h2');
-      if (settingsH2) settingsH2.textContent = t('settingsTitle');
-      const startYearLabel = document.querySelector('label[for="startYear"]');
-      if (startYearLabel) startYearLabel.textContent = t('startYear');
-      const endYearLabel = document.querySelector('label[for="endYear"]');
-      if (endYearLabel) endYearLabel.textContent = t('endYear');
-      const regionLabel = document.querySelector('label[for="regionFilter"]');
-      if (regionLabel) regionLabel.textContent = t('region');
-      const countryLabel = document.querySelector('label[for="countryFilter"]');
-      if (countryLabel) countryLabel.textContent = t('country');
-      const langLabel = document.querySelector('label[for="langSelect"]');
-      if (langLabel) langLabel.textContent = t('language');
-      const startBtn = document.getElementById('startBtn');
-      if (startBtn) startBtn.textContent = t('startGame');
-      const nextBtn = document.getElementById('nextBtn');
-      if (nextBtn) nextBtn.textContent = t('next');
-      const settingsBtn = document.getElementById('settingsBtn');
-      if (settingsBtn) settingsBtn.textContent = t('filters');
-      const labelScore = document.getElementById('labelScore');
-      if (labelScore) labelScore.textContent = t('score');
-      const labelStreak = document.getElementById('labelStreak');
-      if (labelStreak) labelStreak.textContent = t('streak');
-      const streakTitle = document.querySelector('.streak-title');
-      if (streakTitle) streakTitle.textContent = t('streakProgress');
-      const vs = document.querySelector('.vs');
-      if (vs) vs.textContent = t('or');
-    }
-
-    function getLabel(e) {
-      return e.date ? e.date : `${t('year')} ${e.year}`;
-    }
-
-    function countMatchingEvents() {
-      const startYear = parseInt(document.getElementById('startYear').value, 10) || null;
-      const endYear = parseInt(document.getElementById('endYear').value, 10) || null;
-      const region = document.getElementById('regionFilter').value;
-      const country = document.getElementById('countryFilter').value;
-
-      if (startYear !== null && endYear !== null && startYear > endYear) {
-        return { count: 0, valid: false };
-      }
-
-      const count = filterEvents(allEvents, { startYear, endYear, region, country }).length;
-
-      return { count, valid: count >= MIN_EVENTS };
-    }
-
-    function updatePoolCounter() {
-      const { count, valid } = countMatchingEvents();
-      const counterEl = document.getElementById('poolCounter');
-      const startBtn = document.getElementById('startBtn');
-
-      if (valid) {
-        counterEl.textContent = `${count} ${t('eventsAvailable')} ✅`;
-        counterEl.style.color = '#34d399';
-        startBtn.disabled = false;
-        startBtn.style.opacity = '1';
-        startBtn.style.cursor = 'pointer';
-      } else {
-        counterEl.textContent = `${t('needMore')} ${MIN_EVENTS} ${t('toPlay')} (${count}) ❌`;
-        counterEl.style.color = '#f87171';
-        startBtn.disabled = true;
-        startBtn.style.opacity = '0.5';
-        startBtn.style.cursor = 'not-allowed';
-      }
-    }
-
-    function populateFilters(data) {
-      const { regions, countries } = getUniqueRegionsAndCountries(data);
-      const regionSel = document.getElementById('regionFilter');
-      regionSel.innerHTML = '<option value="">' + t('allRegions') + '</option>';
-      regions.forEach((r) => {
-        const opt = document.createElement('option');
-        opt.value = r;
-        opt.textContent = r;
-        regionSel.appendChild(opt);
-      });
-
-      const countrySel = document.getElementById('countryFilter');
-      countrySel.innerHTML = '<option value="">' + t('allCountries') + '</option>';
-      countries.forEach((c) => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        countrySel.appendChild(opt);
-      });
-
-      const savedLang = localStorage.getItem('gameLang') || 'en';
-      document.getElementById('langSelect').value = savedLang;
-
-      updatePoolCounter();
-    }
-
-    async function applyFilters() {
-      const selectedLang = document.getElementById('langSelect').value;
-      localStorage.setItem('gameLang', selectedLang);
-      renderLabels();
-
-      const { count, valid } = countMatchingEvents();
-      const errorEl = document.getElementById('settingsError');
-
-      if (!valid) {
-        errorEl.textContent = `${t('needMore')} ${MIN_EVENTS} ${t('toPlay')} (${count})`;
-        return;
-      }
-
-      const startYear = parseInt(document.getElementById('startYear').value, 10) || null;
-      const endYear = parseInt(document.getElementById('endYear').value, 10) || null;
-      const region = document.getElementById('regionFilter').value;
-      const country = document.getElementById('countryFilter').value;
-
-      events = filterEvents(allEvents, { startYear, endYear, region, country });
-
-      errorEl.textContent = '';
-      score = 0;
-      streak = 0;
-      translations = {};
-      shownPairs = new Set();
-      document.getElementById('score').textContent = '0';
-      document.getElementById('streak').textContent = '0';
-
-      document.getElementById('settings').classList.add('hidden');
-      document.getElementById('game').classList.remove('hidden');
-      updateStreakBar();
-      await nextRound();
-    }
-
-    async function maybeTranslate(pair) {
-      const l = lang();
-      if (l === 'en') return pair;
-      await ensureTranslated(pair, translations, l);
-      return pair.map((e) => {
-        const tr = getText(e, translations, l);
-        return { ...e, short_name: tr.short_name, description: tr.description };
-      });
-    }
-
-    function render([e1, e2]) {
-      a = e1; b = e2;
-      locked = false;
-      earlierId = getEventTime(a) < getEventTime(b) ? a.id : b.id;
-
-      document.getElementById('nameA').textContent = a.short_name;
-      document.getElementById('descA').textContent = a.description;
-      document.getElementById('metaA').textContent = getLabel(a);
-      document.getElementById('metaA').style.display = 'none';
-      document.getElementById('cardA').className = 'card';
-
-      document.getElementById('nameB').textContent = b.short_name;
-      document.getElementById('descB').textContent = b.description;
-      document.getElementById('metaB').textContent = getLabel(b);
-      document.getElementById('metaB').style.display = 'none';
-      document.getElementById('cardB').className = 'card';
-
-      document.getElementById('feedback').textContent = '';
-      document.getElementById('nextBtn').style.display = 'none';
-    }
-
-    function updateStreakBar() {
-      const fill = document.getElementById('streakFill');
-      const text = document.getElementById('milestoneText');
-      const current = getMilestone(streak);
-      const next = getNextMilestone(streak);
-
-      if (streak > 0 && streak % 5 === 0 && current) {
-        fill.style.width = '100%';
-        fill.classList.add('milestone-glow');
-        text.textContent = `🎉 ${current.badge} ${current.name} — ${t('milestone')} ${streak} ${t('reached')}`;
-      } else {
-        fill.classList.remove('milestone-glow');
-        const mod = streak % 5;
-        const pct = (mod / 5) * 100;
-        fill.style.width = pct + '%';
-        if (next && streak < 50) {
-          text.textContent = `${next.badge} ${next.name} — ${t('nextReward')} ${Math.ceil(streak / 5) * 5}`;
-        } else if (streak >= 50) {
-          const final = MILESTONES[50];
-          text.textContent = `👑 ${final.badge} ${final.name}`;
-        } else {
-          const first = MILESTONES[5];
-          text.textContent = `${first.badge} ${first.name} — ${t('nextReward')} 5`;
-        }
-      }
-    }
-
-    function spawnConfetti() {
-      const box = document.getElementById('confetti-box');
-      box.innerHTML = '';
-      const palette = ['#f87171','#fbbf24','#34d399','#60a5fa','#a78bfa','#f472b6'];
-      for (let i = 0; i < 50; i++) {
-        const el = document.createElement('div');
-        el.className = 'confetti';
-        el.style.left = `calc(50% + ${(Math.random() - 0.5) * 30}vw)`;
-        el.style.backgroundColor = palette[Math.floor(Math.random() * palette.length)];
-        const size = 6 + Math.random() * 8;
-        el.style.width = size + 'px';
-        el.style.height = size + 'px';
-        el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-        el.style.animationDuration = (2 + Math.random() * 2) + 's';
-        el.style.animationDelay = (Math.random() * 0.3) + 's';
-        box.appendChild(el);
-      }
-      setTimeout(() => { box.innerHTML = ''; }, 4500);
-    }
-
-    function triggerCelebration(number) {
-      const overlay = document.getElementById('celebrationOverlay');
-      const ms = MILESTONES[number];
-      if (ms) {
-        document.getElementById('celebrationBadge').innerHTML =
-          `<div style="font-size:0.45em;margin-bottom:0.2em;opacity:0.9">${ms.badge} ${ms.name}</div>🔥 ${t('streak').toUpperCase()} ${number} 🔥`;
-      } else {
-        document.getElementById('celebrationBadge').textContent =
-          `🔥 ${t('streak').toUpperCase()} ${number} 🔥`;
-      }
-      overlay.classList.remove('hidden');
-      spawnConfetti();
-      setTimeout(() => {
-        overlay.classList.add('hidden');
-        updateStreakBar();
-      }, 2500);
-    }
-
-    function showWin() {
-      document.getElementById('winOverlay').classList.remove('hidden');
-    }
-
-    function hideWin() {
-      document.getElementById('winOverlay').classList.add('hidden');
-    }
-
-    function showLoader() {
-      document.getElementById('loadingOverlay').classList.remove('hidden');
-      document.getElementById('loadingOverlay').style.opacity = '1';
-    }
-
-    function hideLoader() {
-      document.getElementById('loadingOverlay').classList.add('hidden');
-      document.getElementById('loadingOverlay').style.opacity = '0';
-    }
-
-    function guess(side) {
-      if (locked) return;
-      locked = true;
-
-      const chosen = side === 'A' ? a : b;
-      const isCorrect = chosen.id === earlierId;
-      const earlier = earlierId === a.id ? a : b;
-      const later = earlierId === a.id ? b : a;
-
-      document.getElementById('metaA').style.display = 'block';
-      document.getElementById('metaB').style.display = 'block';
-
-      lastResult = { earlier, later, isCorrect };
-
-      document.getElementById('card' + (earlier === a ? 'A' : 'B')).classList.add('correct');
-      if (!isCorrect) {
-        document.getElementById('card' + side).classList.add('wrong');
-        streak = 0;
-        document.getElementById('feedback').textContent =
-          `${t('wrong')} ${earlier.short_name} (${getLabel(earlier)}) ${t('earlierThan')} ${later.short_name} (${getLabel(later)}).`;
-        updateStreakBar();
-      } else {
-        score++;
-        streak++;
-        document.getElementById('feedback').textContent =
-          `${t('correct')} ${earlier.short_name}`;
-        if (streak > 0 && streak % 5 === 0) {
-          triggerCelebration(streak);
-        } else {
-          updateStreakBar();
-        }
-      }
-
-      document.getElementById('score').textContent = score;
-      document.getElementById('streak').textContent = streak;
-      document.getElementById('cardA').classList.add('disabled');
-      document.getElementById('cardB').classList.add('disabled');
-
-      if (streak >= 50) {
-        setTimeout(() => showWin(), streak % 5 === 0 ? 2600 : 0);
-      } else {
-        document.getElementById('nextBtn').style.display = 'inline-block';
-      }
-    }
-
-    async function nextRound() {
-      lastResult = null;
-      showLoader();
-      const pair = pickPair(events, shownPairs);
-      const final = await maybeTranslate(pair);
-      hideLoader();
-      render(final);
-      updateStreakBar();
-    }
-
-    function openSettings() {
-      document.getElementById('langSelect').value = lang();
-      renderLabels();
-      updatePoolCounter();
-      document.getElementById('game').classList.add('hidden');
-      document.getElementById('settings').classList.remove('hidden');
-      document.getElementById('settingsError').textContent = '';
-    }
-
-    const onStart = () => applyFilters();
-    const onGuessA = () => guess('A');
-    const onGuessB = () => guess('B');
-    const onNext = async () => await nextRound();
-    const onSettings = () => openSettings();
-    const onWinPlayAgain = () => {
-      hideWin();
-      openSettings();
-    };
-
-    document.querySelectorAll('.lang-btn').forEach((btn) => {
-      btn.addEventListener('click', () => changeLang(btn.dataset.lang));
-    });
-
-    document.getElementById('startBtn')?.addEventListener('click', onStart);
-    document.getElementById('cardA')?.addEventListener('click', onGuessA);
-    document.getElementById('cardB')?.addEventListener('click', onGuessB);
-    document.getElementById('nextBtn')?.addEventListener('click', onNext);
-    document.getElementById('settingsBtn')?.addEventListener('click', onSettings);
-    document.getElementById('winBtn')?.addEventListener('click', onWinPlayAgain);
-
-    const onCardAKey = onCardKey(onGuessA);
-    const onCardBKey = onCardKey(onGuessB);
-    document.getElementById('cardA')?.addEventListener('keydown', onCardAKey);
-    document.getElementById('cardB')?.addEventListener('keydown', onCardBKey);
-
-    // Live counter listeners
-    ['startYear', 'endYear', 'regionFilter', 'countryFilter'].forEach((id) => {
-      document.getElementById(id)?.addEventListener('input', updatePoolCounter);
-      document.getElementById(id)?.addEventListener('change', updatePoolCounter);
-    });
-
-    async function init() {
-      updateLangNav();
-      renderLabels();
+    (async () => {
       try {
         const { data, error } = await supabase
           .from('events')
           .select('id, short_name, date, year, description, countries, region');
 
         if (error) {
-          document.getElementById('loading').textContent = t('error') + ' ' + error.message;
+          setInitError(t('error') + ' ' + error.message);
           return;
         }
         if (!data || data.length < 2) {
-          document.getElementById('loading').textContent = t('needEventsTable');
+          setInitError(t('needEventsTable'));
           return;
         }
 
-        allEvents = data;
-        populateFilters(allEvents);
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('settings').classList.remove('hidden');
+        setAllEvents(data);
+        setScreen('settings');
       } catch (err) {
-        document.getElementById('loading').textContent = t('crash') + ' ' + err.message;
+        setInitError(t('crash') + ' ' + err.message);
         console.error(err);
       }
-    }
+    })();
+  }, []);
 
-    init();
+  // Re-translate current pair when language changes (during game)
+  useEffect(() => {
+    if (!pair || screen !== 'game') return;
+    (async () => {
+      const l = lang;
+      if (l === 'en') return;
+      const origA = events.find((e) => e.id === pair.a.id) || pair.a;
+      const origB = events.find((e) => e.id === pair.b.id) || pair.b;
+      await ensureTranslated([origA, origB], translationsRef.current, l);
+      const ta = getText(origA, translationsRef.current, l);
+      const tb = getText(origB, translationsRef.current, l);
+      setPair((p) => p && {
+        ...p,
+        a: { ...p.a, short_name: ta.short_name, description: ta.description },
+        b: { ...p.b, short_name: tb.short_name, description: tb.description },
+      });
+      // Rebuild feedback text if there was a result
+      if (lastResult) {
+        const earlier = pair.earlierId === pair.a.id
+          ? { ...pair.a, short_name: ta.short_name, description: ta.description }
+          : { ...pair.b, short_name: tb.short_name, description: tb.description };
+        const later = pair.earlierId === pair.a.id
+          ? { ...pair.b, short_name: tb.short_name, description: tb.description }
+          : { ...pair.a, short_name: ta.short_name, description: ta.description };
+        const fb = lastResult.isCorrect
+          ? `${t('correct')} ${earlier.short_name}`
+          : `${t('wrong')} ${earlier.short_name} (${getLabel(earlier)}) ${t('earlierThan')} ${later.short_name} (${getLabel(later)}).`;
+        setFeedback(fb);
+      }
+    })();
+  }, [lang]);
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
     return () => {
-      document.getElementById('startBtn')?.removeEventListener('click', onStart);
-      document.getElementById('cardA')?.removeEventListener('click', onGuessA);
-      document.getElementById('cardB')?.removeEventListener('click', onGuessB);
-      document.getElementById('nextBtn')?.removeEventListener('click', onNext);
-      document.getElementById('settingsBtn')?.removeEventListener('click', onSettings);
-      document.getElementById('winBtn')?.removeEventListener('click', onWinPlayAgain);
-      document.getElementById('cardA')?.removeEventListener('keydown', onCardAKey);
-      document.getElementById('cardB')?.removeEventListener('keydown', onCardBKey);
+      if (celebrationTimeoutRef.current) clearTimeout(celebrationTimeoutRef.current);
+      if (winTimeoutRef.current) clearTimeout(winTimeoutRef.current);
     };
   }, []);
 
+  function changeLang(l) {
+    if (l === lang) return;
+    localStorage.setItem('gameLang', l);
+    setLang(l);
+  }
+
+  function spawnConfetti() {
+    const box = confettiBoxRef.current;
+    if (!box) return;
+    box.innerHTML = '';
+    const palette = ['#f87171','#fbbf24','#34d399','#60a5fa','#a78bfa','#f472b6'];
+    for (let i = 0; i < 50; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.left = `calc(50% + ${(Math.random() - 0.5) * 30}vw)`;
+      el.style.backgroundColor = palette[Math.floor(Math.random() * palette.length)];
+      const size = 6 + Math.random() * 8;
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      el.style.animationDuration = (2 + Math.random() * 2) + 's';
+      el.style.animationDelay = (Math.random() * 0.3) + 's';
+      box.appendChild(el);
+    }
+    setTimeout(() => { if (box) box.innerHTML = ''; }, 4500);
+  }
+
+  function triggerCelebration(number) {
+    setCelebration(number);
+    spawnConfetti();
+    celebrationTimeoutRef.current = setTimeout(() => {
+      setCelebration(null);
+    }, 2500);
+  }
+
+  async function maybeTranslate(p) {
+    const l = lang;
+    if (l === 'en') return p;
+    await ensureTranslated([p[0], p[1]], translationsRef.current, l);
+    return p.map((e) => {
+      const tr = getText(e, translationsRef.current, l);
+      return { ...e, short_name: tr.short_name, description: tr.description };
+    });
+  }
+
+  async function nextRound() {
+    setLastResult(null);
+    setShowLoader(true);
+    const [e1, e2] = pickPair(events, shownPairsRef.current);
+    const [te1, te2] = await maybeTranslate([e1, e2]);
+    const earlierId = getEventTime(te1) < getEventTime(te2) ? te1.id : te2.id;
+    setPair({ a: te1, b: te2, earlierId });
+    setLocked(false);
+    lockedRef.current = false;
+    setFeedback('');
+    setShowNext(false);
+    setGuessState({ aState: '', bState: '' });
+    setShowLoader(false);
+  }
+
+  function guess(side) {
+    if (lockedRef.current || !pair) return;
+    lockedRef.current = true;
+    setLocked(true);
+
+    const { a, b, earlierId } = pair;
+    const chosen = side === 'A' ? a : b;
+    const isCorrect = chosen.id === earlierId;
+    const earlier = earlierId === a.id ? a : b;
+    const later = earlierId === a.id ? b : a;
+
+    setLastResult({ earlier, later, isCorrect });
+
+    const correctSide = earlierId === a.id ? 'A' : 'B';
+    const newGuessState = { aState: '', bState: '' };
+    newGuessState[correctSide.toLowerCase() + 'State'] = 'correct';
+    if (!isCorrect) {
+      newGuessState[side.toLowerCase() + 'State'] = 'wrong';
+      setStreak(0);
+      setFeedback(
+        `${t('wrong')} ${earlier.short_name} (${getLabel(earlier)}) ${t('earlierThan')} ${later.short_name} (${getLabel(later)}).`
+      );
+    } else {
+      const newScore = score + 1;
+      const newStreak = streak + 1;
+      setScore(newScore);
+      setStreak(newStreak);
+      setFeedback(`${t('correct')} ${earlier.short_name}`);
+
+      if (newStreak > 0 && newStreak % 5 === 0) {
+        triggerCelebration(newStreak);
+      }
+    }
+    newGuessState.aState = (newGuessState.aState || '') + ' disabled';
+    newGuessState.bState = (newGuessState.bState || '') + ' disabled';
+    setGuessState(newGuessState);
+
+    const newStreakValue = isCorrect ? streak + 1 : 0;
+    if (newStreakValue >= 50) {
+      winTimeoutRef.current = setTimeout(() => setShowWin(true), newStreakValue % 5 === 0 ? 2600 : 0);
+    } else {
+      setShowNext(true);
+    }
+  }
+
+  function openSettings() {
+    setScreen('settings');
+    setShowWin(false);
+  }
+
+  function handleStart({ startYear, endYear, region, country, lang: selectedLang }) {
+    localStorage.setItem('gameLang', selectedLang);
+    setLang(selectedLang);
+    const filtered = filterEvents(allEvents, { startYear, endYear, region, country });
+    setEvents(filtered);
+    setScore(0);
+    setStreak(0);
+    setLastResult(null);
+    setFeedback('');
+    setGuessState({ aState: '', bState: '' });
+    setShowNext(false);
+    setShowWin(false);
+    setCelebration(null);
+    translationsRef.current = {};
+    shownPairsRef.current = new Set();
+    setScreen('game');
+    nextRound();
+  }
+
   return (
     <div className="container">
-      <h1>Which happened earlier?</h1>
-      <p className="subtitle">Pick the older historical event</p>
- 
-      <a href="/multiplayer" className="subtitle" style={{ display: 'block', marginBottom: '1rem', background: 'rgba(99,102,241,0.2)', padding: '0.5rem 1rem', borderRadius: '8px', textDecoration: 'none' }}>
+      <h1>{t('title')}</h1>
+      <p className="subtitle">{t('subtitle')}</p>
+
+      <Link
+        href="/multiplayer"
+        className="subtitle"
+        style={{ display: 'block', marginBottom: '1rem', background: 'rgba(99,102,241,0.2)', padding: '0.5rem 1rem', borderRadius: '8px', textDecoration: 'none' }}
+      >
         🎮 Multiplayer Mode →
-      </a>
+      </Link>
 
-      <div id="loading">Loading events from Supabase…</div>
+      {screen === 'loading' && (
+        <div id="loading">
+          {initError || t('loading')}
+        </div>
+      )}
 
-      <div id="settings" className="hidden">
-        <h2>⚙️ Game Settings</h2>
+      {screen === 'settings' && (
+        <SettingsPanel
+          allEvents={allEvents}
+          lang={lang}
+          t={t}
+          MIN_EVENTS={MIN_EVENTS}
+          onStart={handleStart}
+        />
+      )}
 
-        <div className="field-row">
-          <div className="field">
-            <label htmlFor="startYear">Start Year</label>
-            <input type="number" id="startYear" placeholder="e.g. 1500" />
+      {screen === 'game' && pair && (
+        <div id="game">
+          <LangNav lang={lang} onChange={changeLang} />
+
+          <Hud score={score} streak={streak} t={t} />
+
+          <StreakBar streak={streak} t={t} />
+
+          <div id="feedback">{feedback}</div>
+
+          <div className="cards">
+            <GameCard
+              id="cardA"
+              event={pair.a}
+              meta={getLabel(pair.a)}
+              showMeta={locked}
+              state={guessState.aState}
+              onClick={() => guess('A')}
+              ariaLabel="Pick this event as earlier"
+            />
+            <GameCard
+              id="cardB"
+              event={pair.b}
+              meta={getLabel(pair.b)}
+              showMeta={locked}
+              state={guessState.bState}
+              onClick={() => guess('B')}
+              ariaLabel="Pick this event as earlier"
+            />
           </div>
-          <div className="field">
-            <label htmlFor="endYear">End Year</label>
-            <input type="number" id="endYear" placeholder="e.g. 2000" />
-          </div>
-        </div>
 
-        <div className="field">
-          <label htmlFor="regionFilter">Region</label>
-          <select id="regionFilter">
-            <option value="">All regions</option>
-          </select>
-        </div>
+          <div className="vs">{t('or')}</div>
 
-        <div className="field">
-          <label htmlFor="countryFilter">Country</label>
-          <select id="countryFilter">
-            <option value="">All countries</option>
-          </select>
-        </div>
-
-        <div className="field">
-          <label htmlFor="langSelect">Language</label>
-          <select id="langSelect">
-            <option value="en">English</option>
-            <option value="cs">Čeština</option>
-            <option value="it">Italiano</option>
-          </select>
-        </div>
-
-        <div id="poolCounter" className="pool-counter">Checking pool…</div>
-
-        <button className="btn-primary" id="startBtn">Start Game</button>
-        <div id="settingsError"></div>
-      </div>
-
-      <div id="game" className="hidden">
-        <nav className="lang-nav">
-          <button data-lang="en" className="lang-btn active" aria-label="English">EN</button>
-          <button data-lang="cs" className="lang-btn" aria-label="Čeština">CS</button>
-          <button data-lang="it" className="lang-btn" aria-label="Italiano">IT</button>
-        </nav>
-
-        <div className="hud">
-          <div className="badge"><span className="label" id="labelScore">Score</span> <span id="score">0</span></div>
-          <div className="badge"><span className="label" id="labelStreak">Streak</span> <span id="streak">0</span></div>
-        </div>
-
-        <div className="streak-panel">
-          <div className="streak-header">
-            <span className="streak-title">🔥 Rank Progress</span>
-            <span className="streak-target" id="milestoneText">Next rank at 5</span>
-          </div>
-          <div className="progress-track">
-            <div className="progress-fill" id="streakFill"></div>
-            <div className="progress-masks">
-              <span></span><span></span><span></span><span></span>
-            </div>
+          <div className="controls">
+            {showNext && (
+              <button id="nextBtn" onClick={() => nextRound()}>{t('next')}</button>
+            )}
+            <button className="btn-secondary" id="settingsBtn" onClick={openSettings}>
+              {t('filters')}
+            </button>
           </div>
         </div>
+      )}
 
-        <div id="feedback"></div>
-
-        <div className="cards">
-          <div className="card" id="cardA" tabIndex={0} role="button" aria-label="Pick this event as earlier">
-            <h2 id="nameA"></h2>
-            <p id="descA"></p>
-            <div className="meta" id="metaA"></div>
+      {celebration !== null && (
+        <div className="celebration-overlay">
+          <div className="celebration-badge">
+            {MILESTONES[celebration] ? (
+              <>
+                <div style={{ fontSize: '0.45em', marginBottom: '0.2em', opacity: 0.9 }}>
+                  {MILESTONES[celebration].badge} {MILESTONES[celebration].name}
+                </div>
+                🔥 {t('streak').toUpperCase()} {celebration} 🔥
+              </>
+            ) : (
+              `🔥 ${t('streak').toUpperCase()} ${celebration} 🔥`
+            )}
           </div>
-          <div className="card" id="cardB" tabIndex={0} role="button" aria-label="Pick this event as earlier">
-            <h2 id="nameB"></h2>
-            <p id="descB"></p>
-            <div className="meta" id="metaB"></div>
+        </div>
+      )}
+
+      {showWin && (
+        <div className="win-overlay">
+          <div className="win-content">
+            <div className="win-trophy">🏆</div>
+            <h2 className="win-title">{t('youWon')}</h2>
+            <p className="win-rank">{t('winRank')}</p>
+            <p className="win-subtitle">{t('winSubtitle')}</p>
+            <button className="btn-primary" onClick={openSettings}>{t('playAgain')}</button>
           </div>
         </div>
+      )}
 
-        <div className="vs">or</div>
-
-        <div className="controls">
-          <button id="nextBtn" style={{ display: 'none' }}>Next →</button>
-          <button className="btn-secondary" id="settingsBtn">⚙️ Filters</button>
+      {showLoader && (
+        <div className="loading-overlay">
+          <div className="spinner"></div>
+          <div className="spinner-text">{t('preparing')}</div>
         </div>
-      </div>
+      )}
 
-      <div id="celebrationOverlay" className="celebration-overlay hidden">
-        <div className="celebration-badge" id="celebrationBadge"></div>
-      </div>
-
-      <div id="winOverlay" className="win-overlay hidden">
-        <div className="win-content">
-          <div className="win-trophy">🏆</div>
-          <h2 className="win-title" id="winTitle">You Won!</h2>
-          <p className="win-rank">King of Historical Knowledge</p>
-          <p className="win-subtitle" id="winSubtitle">You reached a streak of 50!</p>
-          <button className="btn-primary" id="winBtn">Play Again</button>
-        </div>
-      </div>
-
-      <div id="loadingOverlay" className="loading-overlay hidden">
-        <div className="spinner"></div>
-        <div className="spinner-text">Preparing next events…</div>
-      </div>
-
-      <div id="confetti-box"></div>
+      <div id="confetti-box" ref={confettiBoxRef}></div>
     </div>
   );
 }

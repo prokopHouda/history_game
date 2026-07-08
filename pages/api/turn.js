@@ -1,21 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { pickPair } from '../../lib/pickPair.js';
+import { getEventYear, getEventTime } from '../../lib/eventTime.js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-function getEventYear(e) {
-  if (e.date) return parseInt(e.date.split('-')[0], 10);
-  return e.year ?? 0;
-}
-
-function getTime(e) {
-  if (e.date) return Date.parse(e.date + 'T00:00:00Z');
-  const y = String(e.year).padStart(4, '0');
-  return Date.parse(`${y}-01-01T00:00:00Z`);
-}
 
 function yearDiff(years) {
   return Math.abs(years[0] - years[1]);
@@ -72,15 +62,9 @@ export default async function handler(req, res) {
 
   const a = pair[0];
   const b = pair[1];
-  const earlierId = getTime(a) < getTime(b) ? a.id : b.id;
+  const earlierId = getEventTime(a) < getEventTime(b) ? a.id : b.id;
 
-  let answered;
-  try {
-    answered = JSON.parse(room.answered || '{}');
-  } catch {
-    answered = room.answered || {};
-    if (!answered || typeof answered !== 'object' || Array.isArray(answered)) answered = {};
-  }
+  const answered = room.answered || {};
   if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Already answered' });
 
   const scores = { ...(room.scores || {}) };
@@ -133,7 +117,7 @@ export default async function handler(req, res) {
       scores[pid] = (scores[pid] || 0) + ans.points;
     });
 
-    const earlier = getTime(a) < getTime(b) ? a : b;
+    const earlier = getEventTime(a) < getEventTime(b) ? a : b;
 
     // Fetch fun_fact for the earlier event directly from DB
     let funFact = '';
@@ -213,8 +197,8 @@ export default async function handler(req, res) {
   res.status(200).json({
     isCorrect,
     points,
-    earlier: getTime(a) < getTime(b) ? a : b,
-    later: getTime(a) < getTime(b) ? b : a,
+    earlier: getEventTime(a) < getEventTime(b) ? a : b,
+    later: getEventTime(a) < getEventTime(b) ? b : a,
     scores,
     allAnswered,
     round,

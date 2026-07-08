@@ -290,6 +290,8 @@ This guarantees:
 - Deterministic key regardless of which event is "A" or "B"
 - Automatic reset when all valid pairs are exhausted (nuclear fallback)
 
+The single-player game also uses `pickPair` with an in-memory `Set` (reset on each new game via "Start Game") for the same anti-repeat behaviour.
+
 ### Why Proximity Weighting + Minimum Gap?
 
 | Without any weighting | With proximity weighting only | With weighting + 10-year MIN_GAP |
@@ -312,6 +314,9 @@ pages/
 │   ├── turn.js           # submit answer + calculate score + 45s deadline
 │   ├── finish.js         # force finish + build full standings
 │   └── translate.js      # DeepL proxy + Supabase cache
+lib/
+├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, MIN_GAP_YEARS=10)
+└── eventTime.js          # Shared getEventYear() / getEventTime() — single source of truth for event dating
 ```
 
 ---

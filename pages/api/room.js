@@ -243,12 +243,13 @@ export default async function handler(req, res) {
     if (!existing) return res.status(404).json({ error: 'Room not found' });
 
     let players = existing.players || [];
+    const validColor = DEFAULT_COLORS.includes(color);
     players = players.map((p) => {
       if (p.id !== playerId) return p;
       return {
         ...p,
         nickname: nickname !== undefined ? (nickname || p.nickname).slice(0, 15) : p.nickname,
-        color: color !== undefined ? (color || p.color) : p.color,
+        color: (color !== undefined && validColor) ? color : p.color,
       };
     });
 

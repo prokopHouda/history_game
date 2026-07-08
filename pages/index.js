@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { pickPair } from '../lib/pickPair.js';
+import { getEventYear, getEventTime } from '../lib/eventTime.js';
 
 export default function Home() {
   useEffect(() => {
@@ -20,6 +22,7 @@ export default function Home() {
     let score = 0, streak = 0, locked = false;
     let lastResult = null;
     let transCache = {};
+    let shownPairs = new Set();
 
     const MILESTONES = {
       5:  { name: 'History Noob',          badge: '🌱' },
@@ -249,17 +252,6 @@ export default function Home() {
       if (vs) vs.textContent = t('or');
     }
 
-    function getEventYear(e) {
-      if (e.date) return parseInt(e.date.split('-')[0], 10);
-      return e.year ?? 0;
-    }
-
-    function getTime(e) {
-      if (e.date) return Date.parse(e.date + 'T00:00:00Z');
-      const y = String(e.year).padStart(4, '0');
-      return Date.parse(`${y}-01-01T00:00:00Z`);
-    }
-
     function getLabel(e) {
       return e.date ? e.date : `${t('year')} ${e.year}`;
     }
@@ -379,6 +371,7 @@ export default function Home() {
       score = 0;
       streak = 0;
       transCache = {};
+      shownPairs = new Set();
       document.getElementById('score').textContent = '0';
       document.getElementById('streak').textContent = '0';
 
@@ -386,17 +379,6 @@ export default function Home() {
       document.getElementById('game').classList.remove('hidden');
       updateStreakBar();
       await nextRound();
-    }
-
-    function pickPair() {
-      let i = Math.floor(Math.random() * events.length);
-      let j = Math.floor(Math.random() * events.length);
-      let guard = 0;
-      while (j === i) {
-        j = Math.floor(Math.random() * events.length);
-        if (++guard > 1000) throw new Error('Stuck picking pair');
-      }
-      return [events[i], events[j]];
     }
 
     async function maybeTranslate(pair) {
@@ -428,7 +410,7 @@ export default function Home() {
     function render([e1, e2]) {
       a = e1; b = e2;
       locked = false;
-      earlierId = getTime(a) < getTime(b) ? a.id : b.id;
+      earlierId = getEventTime(a) < getEventTime(b) ? a.id : b.id;
 
       document.getElementById('nameA').textContent = a.short_name;
       document.getElementById('descA').textContent = a.description;
@@ -577,7 +559,7 @@ export default function Home() {
     async function nextRound() {
       lastResult = null;
       showLoader();
-      const pair = pickPair();
+      const pair = pickPair(events, shownPairs);
       const final = await maybeTranslate(pair);
       hideLoader();
       render(final);
@@ -613,6 +595,17 @@ export default function Home() {
     document.getElementById('nextBtn')?.addEventListener('click', onNext);
     document.getElementById('settingsBtn')?.addEventListener('click', onSettings);
     document.getElementById('winBtn')?.addEventListener('click', onWinPlayAgain);
+
+    const onCardKey = (handler) => (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        handler();
+      }
+    };
+    const onCardAKey = onCardKey(onGuessA);
+    const onCardBKey = onCardKey(onGuessB);
+    document.getElementById('cardA')?.addEventListener('keydown', onCardAKey);
+    document.getElementById('cardB')?.addEventListener('keydown', onCardBKey);
 
     // Live counter listeners
     ['startYear', 'endYear', 'regionFilter', 'countryFilter'].forEach((id) => {
@@ -656,6 +649,8 @@ export default function Home() {
       document.getElementById('nextBtn')?.removeEventListener('click', onNext);
       document.getElementById('settingsBtn')?.removeEventListener('click', onSettings);
       document.getElementById('winBtn')?.removeEventListener('click', onWinPlayAgain);
+      document.getElementById('cardA')?.removeEventListener('keydown', onCardAKey);
+      document.getElementById('cardB')?.removeEventListener('keydown', onCardBKey);
     };
   }, []);
 
@@ -715,9 +710,9 @@ export default function Home() {
 
       <div id="game" className="hidden">
         <nav className="lang-nav">
-          <button data-lang="en" className="lang-btn active">EN</button>
-          <button data-lang="cs" className="lang-btn">CS</button>
-          <button data-lang="it" className="lang-btn">IT</button>
+          <button data-lang="en" className="lang-btn active" aria-label="English">EN</button>
+          <button data-lang="cs" className="lang-btn" aria-label="Čeština">CS</button>
+          <button data-lang="it" className="lang-btn" aria-label="Italiano">IT</button>
         </nav>
 
         <div className="hud">
@@ -741,12 +736,12 @@ export default function Home() {
         <div id="feedback"></div>
 
         <div className="cards">
-          <div className="card" id="cardA">
+          <div className="card" id="cardA" tabIndex={0} role="button" aria-label="Pick this event as earlier">
             <h2 id="nameA"></h2>
             <p id="descA"></p>
             <div className="meta" id="metaA"></div>
           </div>
-          <div className="card" id="cardB">
+          <div className="card" id="cardB" tabIndex={0} role="button" aria-label="Pick this event as earlier">
             <h2 id="nameB"></h2>
             <p id="descB"></p>
             <div className="meta" id="metaB"></div>

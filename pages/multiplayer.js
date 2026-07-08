@@ -1006,19 +1006,33 @@ export default function Multiplayer() {
       const myResultEl = document.getElementById('mp-my-result');
       const resultPairEl = document.getElementById('mp-result-pair');
 
+      const buildMyResult = (icon, color, labelKey, points) => {
+        myResultEl.innerHTML = '';
+        const top = document.createElement('div');
+        top.style.cssText = `color: ${color}; font-size: 1.5rem; font-weight: 800;`;
+        top.textContent = `${icon} ${t(labelKey)} `;
+        const ptsSpan = document.createElement('span');
+        ptsSpan.style.color = '#fbbf24';
+        ptsSpan.textContent = `${points > 0 ? '+' : ''}${points}pts`;
+        top.appendChild(ptsSpan);
+        myResultEl.appendChild(top);
+
+        const sub = document.createElement('div');
+        sub.style.cssText = 'color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;';
+        sub.textContent = `${earlierText.short_name} ${t('wasEarlier')}`;
+        myResultEl.appendChild(sub);
+      };
+
       if (myAns.timedOut) {
-        myResultEl.innerHTML = `<div style="color: #fbbf24; font-size: 1.5rem; font-weight: 800;">⏱️ ${t('timedOut')} <span style="color: #fbbf24;">0pts</span></div>
-          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
+        buildMyResult('⏱️', '#fbbf24', 'timedOut', 0);
         myResultEl.style.borderColor = '#fbbf24';
         myResultEl.style.background = 'rgba(251,191,36,0.1)';
       } else if (myAns.isCorrect) {
-        myResultEl.innerHTML = `<div style="color: #22c55e; font-size: 1.5rem; font-weight: 800;">✅ ${t('correct')} <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
-          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
+        buildMyResult('✅', '#22c55e', 'correct', myAns.points);
         myResultEl.style.borderColor = '#22c55e';
         myResultEl.style.background = 'rgba(34,197,94,0.1)';
       } else {
-        myResultEl.innerHTML = `<div style="color: #ef4444; font-size: 1.5rem; font-weight: 800;">❌ ${t('wrong')} <span style="color: #fbbf24;">${myAns.points > 0 ? '+' : ''}${myAns.points}pts</span></div>
-          <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.25rem;">${earlierText.short_name} ${t('wasEarlier')}</div>`;
+        buildMyResult('❌', '#ef4444', 'wrong', myAns.points);
         myResultEl.style.borderColor = '#ef4444';
         myResultEl.style.background = 'rgba(239,68,68,0.1)';
       }
@@ -1027,24 +1041,46 @@ export default function Multiplayer() {
       const b = lr.pair[1];
       const ta = getText(a);
       const tb = getText(b);
-      resultPairEl.innerHTML = `<div style="display: flex; gap: 1rem; justify-content: center; align-items: center;">
-        <div style="text-align: center;">
-          <div style="font-size: 1.1rem; font-weight: 700;">${ta.short_name}</div>
-          <div style="color: #94a3b8; font-size: 0.85rem;">${a.date || a.year}</div>
-        </div>
-        <div style="color: #94a3b8;">vs</div>
-        <div style="text-align: center;">
-          <div style="font-size: 1.1rem; font-weight: 700;">${tb.short_name}</div>
-          <div style="color: #94a3b8; font-size: 0.85rem;">${b.date || b.year}</div>
-        </div>
-      </div>`;
+
+      resultPairEl.innerHTML = '';
+      const pairWrap = document.createElement('div');
+      pairWrap.style.cssText = 'display: flex; gap: 1rem; justify-content: center; align-items: center;';
+
+      const buildEventCol = (textObj, ev) => {
+        const col = document.createElement('div');
+        col.style.textAlign = 'center';
+        const name = document.createElement('div');
+        name.style.cssText = 'font-size: 1.1rem; font-weight: 700;';
+        name.textContent = textObj.short_name;
+        const date = document.createElement('div');
+        date.style.cssText = 'color: #94a3b8; font-size: 0.85rem;';
+        date.textContent = ev.date || ev.year;
+        col.appendChild(name);
+        col.appendChild(date);
+        return col;
+      };
+
+      pairWrap.appendChild(buildEventCol(ta, a));
+      const vs = document.createElement('div');
+      vs.style.color = '#94a3b8';
+      vs.textContent = 'vs';
+      pairWrap.appendChild(vs);
+      pairWrap.appendChild(buildEventCol(tb, b));
+      resultPairEl.appendChild(pairWrap);
 
       const funFactText = earlierText.fun_fact || lr.fun_fact || '';
       if (funFactText) {
-        resultPairEl.innerHTML += `<div style="margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border-radius: 10px; border: 1px solid rgba(99,102,241,0.2); text-align: center;">
-          <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: #818cf8; letter-spacing: 0.05em; margin-bottom: 0.25rem;">${t('didYouKnow')}</div>
-          <div style="font-size: 0.95rem; color: #c7d2fe; font-style: italic; line-height: 1.5;">${funFactText}</div>
-        </div>`;
+        const ffWrap = document.createElement('div');
+        ffWrap.style.cssText = 'margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border-radius: 10px; border: 1px solid rgba(99,102,241,0.2); text-align: center;';
+        const ffTitle = document.createElement('div');
+        ffTitle.style.cssText = 'font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: #818cf8; letter-spacing: 0.05em; margin-bottom: 0.25rem;';
+        ffTitle.textContent = t('didYouKnow');
+        const ffBody = document.createElement('div');
+        ffBody.style.cssText = 'font-size: 0.95rem; color: #c7d2fe; font-style: italic; line-height: 1.5;';
+        ffBody.textContent = funFactText;
+        ffWrap.appendChild(ffTitle);
+        ffWrap.appendChild(ffBody);
+        resultPairEl.appendChild(ffWrap);
       }
 
       renderRoundLeaderboard(lr);
@@ -1316,6 +1352,17 @@ export default function Multiplayer() {
     document.getElementById('btn-join')?.addEventListener('click', joinRoom);
     document.getElementById('mp-cardA')?.addEventListener('click', () => guess('A'));
     document.getElementById('mp-cardB')?.addEventListener('click', () => guess('B'));
+
+    const onCardKey = (side) => (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        guess(side);
+      }
+    };
+    const onCardAKey = onCardKey('A');
+    const onCardBKey = onCardKey('B');
+    document.getElementById('mp-cardA')?.addEventListener('keydown', onCardAKey);
+    document.getElementById('mp-cardB')?.addEventListener('keydown', onCardBKey);
     document.getElementById('btn-play-again')?.addEventListener('click', restartGame);
     document.getElementById('btn-new-game')?.addEventListener('click', () => window.location.href = '/multiplayer');
     document.getElementById('btn-back-lobby')?.addEventListener('click', () => window.location.reload());
@@ -1339,6 +1386,8 @@ export default function Multiplayer() {
       if (turnTimeoutId) clearTimeout(turnTimeoutId);
       if (countdownInterval) clearInterval(countdownInterval);
       window.removeEventListener('beforeunload', leaveRoom);
+      document.getElementById('mp-cardA')?.removeEventListener('keydown', onCardAKey);
+      document.getElementById('mp-cardB')?.removeEventListener('keydown', onCardBKey);
     };
   }, []);
 
@@ -1442,9 +1491,9 @@ export default function Multiplayer() {
       {/* GAME SCREEN */}
       <div id="mp-game" className="hidden">
         <nav className="lang-nav">
-          <button data-lang="en" className="lang-btn active">EN</button>
-          <button data-lang="cs" className="lang-btn">CS</button>
-          <button data-lang="it" className="lang-btn">IT</button>
+          <button data-lang="en" className="lang-btn active" aria-label="English">EN</button>
+          <button data-lang="cs" className="lang-btn" aria-label="Čeština">CS</button>
+          <button data-lang="it" className="lang-btn" aria-label="Italiano">IT</button>
         </nav>
 
         <div id="mp-leaderboard" style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '0.75rem', marginBottom: '1rem', maxHeight: '200px', overflowY: 'auto' }}>
@@ -1457,13 +1506,13 @@ export default function Multiplayer() {
         <div id="mp-status" style={{ marginBottom: '1rem', fontWeight: 700, textAlign: 'center' }} />
 
         <div className="cards">
-          <div className="card" id="mp-cardA">
+          <div className="card" id="mp-cardA" tabIndex={0} role="button" aria-label="Pick this event as earlier">
             <div className="card-check" id="mp-checkA">✓</div>
             <div id="mp-loadingA" style={{ display: 'none', marginBottom: '0.5rem' }}><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
             <h2 id="mp-nameA" />
             <p id="mp-descA" />
           </div>
-          <div className="card" id="mp-cardB">
+          <div className="card" id="mp-cardB" tabIndex={0} role="button" aria-label="Pick this event as earlier">
             <div className="card-check" id="mp-checkB">✓</div>
             <div id="mp-loadingB" style={{ display: 'none', marginBottom: '0.5rem' }}><div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} /></div>
             <h2 id="mp-nameB" />

@@ -89,7 +89,7 @@ Join an existing room by 3-letter code. Rejected if game is in progress or room 
 
 ### `POST /api/room` — Update Profile
 
-Update your nickname and/or color while in the waiting room.
+Update your nickname and/or color while in the waiting room. The `color` value must be one of the predefined `DEFAULT_COLORS` (`#ef4444`, `#3b82f6`, `#22c55e`, `#eab308`, `#a855f7`, `#f97316`, `#ec4899`, `#14b8a6`, `#84cc16`, `#6366f1`); invalid colors are silently ignored and the existing color is kept.
 
 **Request body:**
 ```json

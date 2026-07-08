@@ -122,7 +122,8 @@ export default async function handler(req, res) {
       return { event_id: r.id, lang, short_name: sn, description, fun_fact };
     });
 
-    await supabaseAdmin.from('event_translations').insert(inserts);
+    await supabaseAdmin.from('event_translations')
+      .upsert(inserts, { onConflict: 'event_id,lang' });
   }
 
   res.status(200).json(result);

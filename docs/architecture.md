@@ -138,11 +138,12 @@ erDiagram
     }
 
     EVENT_TRANSLATIONS {
-        int id PK
-        int event_id FK
-        varchar lang
+        int event_id PK
+        varchar lang PK
         varchar short_name
         text description
+        text fun_fact
+        timestamptz updated_at
     }
 
     ROOMS {
@@ -162,9 +163,10 @@ erDiagram
         timestamptz round_started_at
         varchar next_round_at
         varchar state
+        timestamptz updated_at
     }
 
-    EVENTS ||--o{ EVENT_TRANSLATIONS : "translated to"
+    EVENTS ||--o{ EVENT_TRANSLATIONS : "translated to (FK, ON DELETE CASCADE, UNIQUE(event_id,lang))"
 ```
 
 ---

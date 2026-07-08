@@ -1,7 +1,11 @@
 import { useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { pickPair } from '../lib/pickPair.js';
-import { getEventYear, getEventTime } from '../lib/eventTime.js';
+import { getEventTime } from '../lib/eventTime.js';
+import { baseUiText, makeT } from '../lib/i18n.js';
+import { filterEvents, getUniqueRegionsAndCountries } from '../lib/filters.js';
+import { ensureTranslated, getText } from '../lib/translate.js';
+import { onCardKey } from '../lib/onCardKey.js';
 
 export default function Home() {
   useEffect(() => {
@@ -21,7 +25,7 @@ export default function Home() {
     let a, b, earlierId;
     let score = 0, streak = 0, locked = false;
     let lastResult = null;
-    let transCache = {};
+    let translations = {};
     let shownPairs = new Set();
 
     const MILESTONES = {
@@ -51,17 +55,12 @@ export default function Home() {
 
     const UI = {
       en: {
+        ...baseUiText.en,
         title: 'Which happened earlier?',
         subtitle: 'Pick the older historical event',
         loading: 'Loading events from Supabase…',
         settingsTitle: '⚙️ Game Settings',
-        startYear: 'Start Year',
-        endYear: 'End Year',
-        region: 'Region',
-        country: 'Country',
-        language: 'Language',
         startGame: 'Start Game',
-        score: 'Score',
         streak: 'Streak',
         streakProgress: '🔥 Rank Progress',
         nextReward: 'Next rank',
@@ -75,13 +74,9 @@ export default function Home() {
         filters: '⚙️ Filters',
         youWon: 'You Won!',
         winSubtitle: 'You reached a streak of 50!',
-        playAgain: 'Play Again',
         eventsAvailable: 'events available',
         needMore: 'Pick broader filters — need at least',
         toPlay: 'to play',
-        allRegions: 'All regions',
-        allCountries: 'All countries',
-        checkingPool: 'Checking pool…',
         year: 'Year',
         preparing: 'Preparing next events…',
         winRank: 'King of Historical Knowledge',
@@ -91,17 +86,12 @@ export default function Home() {
         needEventsTable: 'Need at least 2 events in the table.',
       },
       cs: {
+        ...baseUiText.cs,
         title: 'Co se stalo dříve?',
         subtitle: 'Vyber starší historickou událost',
         loading: 'Načítání událostí ze Supabase…',
         settingsTitle: '⚙️ Nastavení hry',
-        startYear: 'Od roku',
-        endYear: 'Do roku',
-        region: 'Region',
-        country: 'Země',
-        language: 'Jazyk',
         startGame: 'Spustit hru',
-        score: 'Skóre',
         streak: 'Série',
         streakProgress: '🔥 Průběh hodnosti',
         nextReward: 'Další hodnost',
@@ -115,13 +105,9 @@ export default function Home() {
         filters: '⚙️ Filtry',
         youWon: 'Vyhrál jsi!',
         winSubtitle: 'Dosáhl jsi série 50!',
-        playAgain: 'Hrát znovu',
         eventsAvailable: 'událostí k dispozici',
         needMore: 'Vyber méně restriktivní filtry — potřebuješ alespoň',
         toPlay: 'k hraní',
-        allRegions: 'Všechny regiony',
-        allCountries: 'Všechny země',
-        checkingPool: 'Kontroluji dostupnost...',
         year: 'Rok',
         preparing: 'Příprava dalších událostí…',
         winRank: 'Král historických znalostí',
@@ -131,17 +117,12 @@ export default function Home() {
         missingEnv: 'Chybí Supabase proměnné prostředí',
       },
       it: {
+        ...baseUiText.it,
         title: 'Quale è avvenuto prima?',
         subtitle: "Scegli l'evento storico più antico",
         loading: 'Caricamento eventi da Supabase…',
         settingsTitle: '⚙️ Impostazioni di gioco',
-        startYear: 'Anno inizio',
-        endYear: 'Anno fine',
-        region: 'Regione',
-        country: 'Paese',
-        language: 'Lingua',
         startGame: 'Inizia',
-        score: 'Punteggio',
         streak: 'Serie',
         streakProgress: '🔥 Progresso grado',
         nextReward: 'Prossimo grado',
@@ -155,13 +136,9 @@ export default function Home() {
         filters: '⚙️ Filtri',
         youWon: 'Hai Vinto!',
         winSubtitle: 'Hai raggiunto una serie di 50!',
-        playAgain: 'Gioca ancora',
         eventsAvailable: 'eventi disponibili',
         needMore: 'Allarga i filtri — servono almeno',
         toPlay: 'per giocare',
-        allRegions: 'Tutte le regioni',
-        allCountries: 'Tutti i paesi',
-        checkingPool: 'Verifico disponibilità...',
         year: 'Anno',
         preparing: 'Preparazione prossimi eventi…',
         winRank: 'Re della conoscenza storica',
@@ -176,9 +153,7 @@ export default function Home() {
       return localStorage.getItem('gameLang') || 'en';
     }
 
-    function t(key) {
-      return UI[lang()]?.[key] || UI.en[key];
-    }
+    const { t } = makeT(UI, lang);
 
     function updateLangNav() {
       const current = lang();
@@ -266,17 +241,7 @@ export default function Home() {
         return { count: 0, valid: false };
       }
 
-      const count = allEvents.filter((e) => {
-        const y = getEventYear(e);
-        if (startYear !== null && y < startYear) return false;
-        if (endYear !== null && y > endYear) return false;
-        if (region && e.region !== region) return false;
-        if (country) {
-          const list = (e.countries || '').split(',').map((c) => c.trim()).filter(Boolean);
-          if (!list.includes(country)) return false;
-        }
-        return true;
-      }).length;
+      const count = filterEvents(allEvents, { startYear, endYear, region, country }).length;
 
       return { count, valid: count >= MIN_EVENTS };
     }
@@ -302,7 +267,7 @@ export default function Home() {
     }
 
     function populateFilters(data) {
-      const regions = [...new Set(data.map((e) => e.region).filter(Boolean))].sort();
+      const { regions, countries } = getUniqueRegionsAndCountries(data);
       const regionSel = document.getElementById('regionFilter');
       regionSel.innerHTML = '<option value="">' + t('allRegions') + '</option>';
       regions.forEach((r) => {
@@ -312,16 +277,6 @@ export default function Home() {
         regionSel.appendChild(opt);
       });
 
-      const countrySet = new Set();
-      data.forEach((e) => {
-        if (e.countries) {
-          e.countries.split(',').forEach((c) => {
-            const code = c.trim();
-            if (code) countrySet.add(code);
-          });
-        }
-      });
-      const countries = [...countrySet].sort();
       const countrySel = document.getElementById('countryFilter');
       countrySel.innerHTML = '<option value="">' + t('allCountries') + '</option>';
       countries.forEach((c) => {
@@ -355,22 +310,12 @@ export default function Home() {
       const region = document.getElementById('regionFilter').value;
       const country = document.getElementById('countryFilter').value;
 
-      events = allEvents.filter((e) => {
-        const y = getEventYear(e);
-        if (startYear !== null && y < startYear) return false;
-        if (endYear !== null && y > endYear) return false;
-        if (region && e.region !== region) return false;
-        if (country) {
-          const list = (e.countries || '').split(',').map((c) => c.trim()).filter(Boolean);
-          if (!list.includes(country)) return false;
-        }
-        return true;
-      });
+      events = filterEvents(allEvents, { startYear, endYear, region, country });
 
       errorEl.textContent = '';
       score = 0;
       streak = 0;
-      transCache = {};
+      translations = {};
       shownPairs = new Set();
       document.getElementById('score').textContent = '0';
       document.getElementById('streak').textContent = '0';
@@ -384,26 +329,10 @@ export default function Home() {
     async function maybeTranslate(pair) {
       const l = lang();
       if (l === 'en') return pair;
-
-      const ids = pair.map((e) => e.id).join(',');
-      const missing = pair.filter((e) => !transCache[`${e.id}-${l}`]);
-
-      if (missing.length > 0) {
-        try {
-          const res = await fetch(`/api/translate?ids=${ids}&lang=${l}`);
-          const data = await res.json();
-          Object.entries(data).forEach(([id, tr]) => {
-            transCache[`${id}-${l}`] = tr;
-          });
-        } catch (err) {
-          console.error('Translate fetch failed', err);
-        }
-      }
-
+      await ensureTranslated(pair, translations, l);
       return pair.map((e) => {
-        const tr = transCache[`${e.id}-${l}`];
-        if (!tr) return e;
-        return { ...e, short_name: tr.short_name || e.short_name, description: tr.description || e.description };
+        const tr = getText(e, translations, l);
+        return { ...e, short_name: tr.short_name, description: tr.description };
       });
     }
 
@@ -596,12 +525,6 @@ export default function Home() {
     document.getElementById('settingsBtn')?.addEventListener('click', onSettings);
     document.getElementById('winBtn')?.addEventListener('click', onWinPlayAgain);
 
-    const onCardKey = (handler) => (e) => {
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-        e.preventDefault();
-        handler();
-      }
-    };
     const onCardAKey = onCardKey(onGuessA);
     const onCardBKey = onCardKey(onGuessB);
     document.getElementById('cardA')?.addEventListener('keydown', onCardAKey);

@@ -316,7 +316,11 @@ pages/
 │   └── translate.js      # DeepL proxy + Supabase cache
 lib/
 ├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, MIN_GAP_YEARS=10)
-└── eventTime.js          # Shared getEventYear() / getEventTime() — single source of truth for event dating
+├── eventTime.js          # Shared getEventYear() / getEventTime() — single source of truth for event dating
+├── i18n.js               # Shared base UI text (10 keys × 3 langs) + makeT() accessor factory
+├── filters.js            # Shared filterEvents() + getUniqueRegionsAndCountries()
+├── translate.js          # Shared ensureTranslated() / getText() — fetch + cache translations
+└── onCardKey.js           # Shared keyboard handler factory (Enter/Space → click)
 ```
 
 ---

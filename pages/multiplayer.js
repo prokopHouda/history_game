@@ -1,5 +1,9 @@
 import { useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { baseUiText, makeT } from '../lib/i18n.js';
+import { filterEvents, getUniqueRegionsAndCountries } from '../lib/filters.js';
+import { ensureTranslated as ensureTranslatedLib, getText as getTextLib } from '../lib/translate.js';
+import { onCardKey } from '../lib/onCardKey.js';
 
 export default function Multiplayer() {
   useEffect(() => {
@@ -92,15 +96,11 @@ export default function Multiplayer() {
 
     const uiText = {
       en: {
+        ...baseUiText.en,
         title: 'Multiplayer',
         subtitle: 'Compete with up to 9 friends in real time',
         createGame: 'Create Game',
         joinGame: 'Join Game',
-        language: 'Language',
-        startYear: 'Start Year',
-        endYear: 'End Year',
-        region: 'Region',
-        country: 'Country',
         rounds: 'Number of Rounds (5–50)',
         createRoom: 'Create Room',
         joinRoom: 'Join Room',
@@ -131,8 +131,6 @@ export default function Multiplayer() {
         save: 'Save',
         finalStandings: 'Final Standings',
         rank: 'Rank',
-        score: 'Score',
-        playAgain: 'Play Again',
         returnToLobby: 'Return to lobby',
         restartGame: 'Restart game',
         minPlayers: 'Need at least 2 players to start',
@@ -146,23 +144,16 @@ export default function Multiplayer() {
         roundsRange: 'Rounds must be 5–50',
         needEvents: 'Need at least {min} events to play ({count})',
         creating: 'Creating...',
-        allRegions: 'All regions',
-        allCountries: 'All countries',
         placeholderStartYear: 'e.g. 1500',
         placeholderEndYear: 'e.g. 2000',
         placeholderRoomCode: 'abc',
-        checkingPool: 'Checking pool…',
       },
       cs: {
+        ...baseUiText.cs,
         title: 'Multiplayer',
         subtitle: 'Soutěž s až 9 přáteli v reálném čase',
         createGame: 'Vytvořit hru',
         joinGame: 'Připojit se ke hře',
-        language: 'Jazyk',
-        startYear: 'Od roku',
-        endYear: 'Do roku',
-        region: 'Region',
-        country: 'Země',
         rounds: 'Počet kol (5–50)',
         createRoom: 'Vytvořit místnost',
         joinRoom: 'Připojit se',
@@ -193,8 +184,6 @@ export default function Multiplayer() {
         save: 'Uložit',
         finalStandings: 'Konečné pořadí',
         rank: 'Pozice',
-        score: 'Skóre',
-        playAgain: 'Hrát znovu',
         returnToLobby: 'Zpět do lobby',
         restartGame: 'Restart hry',
         minPlayers: 'Ke startu jsou potřeba alespoň 2 hráči',
@@ -208,23 +197,16 @@ export default function Multiplayer() {
         roundsRange: 'Kol musí být 5–50',
         needEvents: 'Potřebuješ alespoň {min} událostí ke hře ({count})',
         creating: 'Vytváření...',
-        allRegions: 'Všechny regiony',
-        allCountries: 'Všechny země',
         placeholderStartYear: 'např. 1500',
         placeholderEndYear: 'např. 2000',
         placeholderRoomCode: 'abc',
-        checkingPool: 'Kontroluji dostupnost...',
       },
       it: {
+        ...baseUiText.it,
         title: 'Multiplayer',
         subtitle: 'Gareggia con fino a 9 amici in tempo reale',
         createGame: 'Crea partita',
         joinGame: 'Unisciti alla partita',
-        language: 'Lingua',
-        startYear: 'Anno inizio',
-        endYear: 'Anno fine',
-        region: 'Regione',
-        country: 'Paese',
         rounds: 'Numero di round (5–50)',
         createRoom: 'Crea stanza',
         joinRoom: 'Unisciti',
@@ -255,8 +237,6 @@ export default function Multiplayer() {
         save: 'Salva',
         finalStandings: 'Classifica finale',
         rank: 'Posizione',
-        score: 'Punteggio',
-        playAgain: 'Gioca ancora',
         returnToLobby: 'Torna alla lobby',
         restartGame: 'Ricomincia partita',
         minPlayers: 'Servono almeno 2 giocatori per iniziare',
@@ -270,27 +250,13 @@ export default function Multiplayer() {
         roundsRange: 'I round devono essere 5–50',
         needEvents: 'Servono almeno {min} eventi per giocare ({count})',
         creating: 'Creazione in corso...',
-        allRegions: 'Tutte le regioni',
-        allCountries: 'Tutti i paesi',
         placeholderStartYear: 'es. 1500',
         placeholderEndYear: 'es. 2000',
         placeholderRoomCode: 'abc',
-        checkingPool: 'Controllo disponibilità...',
       },
     };
 
-    function t(key) {
-      const l = getLang();
-      return uiText[l]?.[key] ?? uiText.en[key] ?? key;
-    }
-
-    function tf(key, vars = {}) {
-      let text = t(key);
-      Object.entries(vars).forEach(([k, v]) => {
-        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
-      });
-      return text;
-    }
+    const { t, tf } = makeT(uiText, getLang);
 
     function updateUIText() {
       const l = getLang();
@@ -652,11 +618,6 @@ export default function Multiplayer() {
     }
     initLobby();
 
-    function getEventYear(e) {
-      if (e.date) return parseInt(e.date.split('-')[0], 10);
-      return e.year ?? 0;
-    }
-
     function countMatchingEvents() {
       const startYear = parseInt(document.getElementById('mp-startYear').value, 10) || null;
       const endYear = parseInt(document.getElementById('mp-endYear').value, 10) || null;
@@ -667,17 +628,7 @@ export default function Multiplayer() {
         return { count: 0, valid: false };
       }
 
-      const count = allEvents.filter((e) => {
-        const y = getEventYear(e);
-        if (startYear !== null && y < startYear) return false;
-        if (endYear !== null && y > endYear) return false;
-        if (region && e.region !== region) return false;
-        if (country) {
-          const list = (e.countries || '').split(',').map((c) => c.trim()).filter(Boolean);
-          if (!list.includes(country)) return false;
-        }
-        return true;
-      }).length;
+      const count = filterEvents(allEvents, { startYear, endYear, region, country }).length;
 
       return { count, valid: count >= MIN_EVENTS };
     }
@@ -703,7 +654,7 @@ export default function Multiplayer() {
     }
 
     function populateFilters(data) {
-      const regions = [...new Set(data.map((e) => e.region).filter(Boolean))].sort();
+      const { regions, countries } = getUniqueRegionsAndCountries(data);
       const regionSel = document.getElementById('mp-regionFilter');
       regionSel.innerHTML = '<option value="">' + t('allRegions') + '</option>';
       regions.forEach((r) => {
@@ -713,16 +664,6 @@ export default function Multiplayer() {
         regionSel.appendChild(opt);
       });
 
-      const countrySet = new Set();
-      data.forEach((e) => {
-        if (e.countries) {
-          e.countries.split(',').forEach((c) => {
-            const code = c.trim();
-            if (code) countrySet.add(code);
-          });
-        }
-      });
-      const countries = [...countrySet].sort();
       const countrySel = document.getElementById('mp-countryFilter');
       countrySel.innerHTML = '<option value="">' + t('allCountries') + '</option>';
       countries.forEach((c) => {
@@ -905,34 +846,11 @@ export default function Multiplayer() {
     }
 
     async function ensureTranslated(events) {
-      const lang = getLang();
-      if (lang === 'en') return;
-      if (!translations[lang]) translations[lang] = {};
-      const cache = translations[lang];
-      const ids = events.filter((e) => e && !cache[e.id]).map((e) => e.id);
-      if (ids.length === 0) return;
-
-      try {
-        const res = await fetch(`/api/translate?ids=${ids.join(',')}&lang=${lang}`);
-        if (res.ok) {
-          const data = await res.json();
-          Object.entries(data).forEach(([id, t]) => {
-            cache[Number(id)] = t;
-          });
-        }
-      } catch (err) {
-        console.error('Translation fetch failed', err);
-      }
+      return ensureTranslatedLib(events, translations, getLang());
     }
 
     function getText(event) {
-      const lang = getLang();
-      const t = translations[lang]?.[event.id];
-      return {
-        short_name: t?.short_name || event.short_name || '???',
-        description: t?.description || event.description || '',
-        fun_fact: t?.fun_fact || '',
-      };
+      return getTextLib(event, translations, getLang());
     }
 
     function showLobby() {
@@ -1353,14 +1271,8 @@ export default function Multiplayer() {
     document.getElementById('mp-cardA')?.addEventListener('click', () => guess('A'));
     document.getElementById('mp-cardB')?.addEventListener('click', () => guess('B'));
 
-    const onCardKey = (side) => (e) => {
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-        e.preventDefault();
-        guess(side);
-      }
-    };
-    const onCardAKey = onCardKey('A');
-    const onCardBKey = onCardKey('B');
+    const onCardAKey = onCardKey(() => guess('A'));
+    const onCardBKey = onCardKey(() => guess('B'));
     document.getElementById('mp-cardA')?.addEventListener('keydown', onCardAKey);
     document.getElementById('mp-cardB')?.addEventListener('keydown', onCardBKey);
     document.getElementById('btn-play-again')?.addEventListener('click', restartGame);

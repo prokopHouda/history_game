@@ -226,14 +226,14 @@ h1 {
   font-weight: 600;
   font-size: 0.95rem;
   color: #fbbf24;
-  margin: 0.5rem 0 0.75rem;
+  margin: 0.5rem 0 1.25rem;
 }
 .timeline {
   position: relative;
   height: 4px;
   background: rgba(148,163,184,0.3);
   border-radius: 2px;
-  margin: 0.75rem auto;
+  margin: 0.75rem auto 2rem;
   max-width: 320px;
 }
 .timeline .marker {

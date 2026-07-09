@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
@@ -16,6 +20,8 @@
   },
   "devDependencies": {
     "eslint": "^9",
-    "eslint-config-next": "16.2.6"
+    "eslint-config-next": "16.2.6",
+    "jsdom": "^25",
+    "vitest": "^3"
   }
 }

@@ -342,6 +342,18 @@ lib/
 ├── onCardKey.js           # Shared keyboard handler factory (Enter/Space → click)
 ├── milestones.js         # MILESTONES, getMilestone(), getNextMilestone()
 └── mpColors.js           # DEFAULT_COLORS array for multiplayer player colors
+tests/
+└── lib/
+    ├── eventTime.test.js     # getEventYear / getEventTime (14 tests)
+    ├── filters.test.js       # filterEvents / getUniqueRegionsAndCountries (17 tests)
+    ├── pickPair.test.js      # canonicalKey / pickPair (13 tests)
+    ├── milestones.test.js    # MILESTONES / getMilestone / getNextMilestone (14 tests)
+    ├── i18n.test.js          # baseUiText / makeT (10 tests)
+    ├── onCardKey.test.js     # keyboard handler (5 tests)
+    └── translate.test.js     # ensureTranslated / getText (14 tests)
+.github/workflows/
+└── ci.yml                    # GitHub Actions: lint + test on push/PR
+vitest.config.mjs             # Vitest config (jsdom env)
 ```
 
 ---
@@ -362,6 +374,25 @@ lib/
 ```mermaid
 flowchart LR
     A["Developer commits to main"] --> B["GitHub"]
-    B --> C["Vercel Auto-Deploy"]
-    C --> D["Production"]
+    B --> C["GitHub Actions CI: lint + test"]
+    C --> D["Vercel Auto-Deploy: build"]
+    D --> E["Production"]
 ```
+
+---
+
+## Testing
+
+The project uses **Vitest** with **jsdom** for unit testing. Tests cover all 8 `lib/` files (87 tests total).
+
+### Running tests
+
+```bash
+npm run test          # watch mode
+npm run test:run      # single run (CI)
+npm run test:coverage # with coverage report
+```
+
+### CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs `npm run lint` and `npm run test:run` on every push and pull request. The build step is left to Vercel (no env vars needed in GitHub Actions).

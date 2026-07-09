@@ -210,15 +210,59 @@ h1 {
   height: 100%;
 }
 
-/* Feedback */
-#feedback {
+/* Result feedback */
+.result-feedback {
   text-align: center;
   min-height: 2rem;
-  font-weight: 700;
-  font-size: 1.05rem;
   margin-bottom: 1.25rem;
   color: #f8fafc;
   text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.outcome-line {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.gap-line {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #fbbf24;
+  margin: 0.5rem 0 0.75rem;
+}
+.timeline {
+  position: relative;
+  height: 4px;
+  background: rgba(148,163,184,0.3);
+  border-radius: 2px;
+  margin: 0.75rem auto;
+  max-width: 320px;
+}
+.timeline .marker {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  top: -5px;
+}
+.timeline .marker.earlier {
+  left: 0;
+  background: #22c55e;
+}
+.timeline .marker.later {
+  right: 0;
+  background: #94a3b8;
+}
+.timeline .marker-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  position: absolute;
+  top: 14px;
+  white-space: nowrap;
+}
+.timeline .marker-label.earlier-label {
+  left: 0;
+}
+.timeline .marker-label.later-label {
+  right: 0;
 }
 
 /* Cards */

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import { pickPair } from '../lib/pickPair.js';
-import { getEventTime } from '../lib/eventTime.js';
+import { getEventTime, getEventYear } from '../lib/eventTime.js';
 import { baseUiText, makeT } from '../lib/i18n.js';
 import { filterEvents } from '../lib/filters.js';
 import { ensureTranslated, getText } from '../lib/translate.js';
@@ -12,6 +12,7 @@ import GameCard from '../components/GameCard.js';
 import StreakBar from '../components/StreakBar.js';
 import Hud from '../components/Hud.js';
 import LangNav from '../components/LangNav.js';
+import ResultFeedback from '../components/ResultFeedback.js';
 
 const MIN_EVENTS = 25;
 
@@ -31,6 +32,7 @@ const PAGE_UI = {
     correct: 'Correct!',
     wrong: 'Wrong —',
     earlierThan: 'was earlier than',
+    yearsApart: '{n} years apart',
     or: 'or',
     next: 'Next →',
     filters: '⚙️ Filters',
@@ -62,6 +64,7 @@ const PAGE_UI = {
     correct: 'Správně!',
     wrong: 'Špatně —',
     earlierThan: 'bylo dříve než',
+    yearsApart: '{n} let od sebe',
     or: 'nebo',
     next: 'Další →',
     filters: '⚙️ Filtry',
@@ -93,6 +96,7 @@ const PAGE_UI = {
     correct: 'Corretto!',
     wrong: 'Sbagliato —',
     earlierThan: 'era prima di',
+    yearsApart: '{n} anni di distanza',
     or: 'oppure',
     next: 'Avanti →',
     filters: '⚙️ Filtri',
@@ -121,7 +125,6 @@ export default function Home() {
   const [streak, setStreak] = useState(0);
   const [locked, setLocked] = useState(false);
   const [lastResult, setLastResult] = useState(null);
-  const [feedback, setFeedback] = useState('');
   const [guessState, setGuessState] = useState({ aState: '', bState: '' });
   const [showNext, setShowNext] = useState(false);
   const [celebration, setCelebration] = useState(null);
@@ -141,7 +144,7 @@ export default function Home() {
   const winTimeoutRef = useRef(null);
   const confettiBoxRef = useRef(null);
 
-  const { t } = makeT(PAGE_UI, () => lang);
+  const { t, tf } = makeT(PAGE_UI, () => lang);
 
   const getLabel = useCallback((e) => {
     return e.date ? e.date : `${t('year')} ${e.year}`;
@@ -198,18 +201,17 @@ export default function Home() {
         a: { ...p.a, short_name: ta.short_name, description: ta.description },
         b: { ...p.b, short_name: tb.short_name, description: tb.description },
       });
-      // Rebuild feedback text if there was a result
+      // Rebuild lastResult with freshly-translated event objects
       if (lastResult) {
-        const earlier = pair.earlierId === pair.a.id
-          ? { ...pair.a, short_name: ta.short_name, description: ta.description }
-          : { ...pair.b, short_name: tb.short_name, description: tb.description };
-        const later = pair.earlierId === pair.a.id
-          ? { ...pair.b, short_name: tb.short_name, description: tb.description }
-          : { ...pair.a, short_name: ta.short_name, description: ta.description };
-        const fb = lastResult.isCorrect
-          ? `${t('correct')} ${earlier.short_name}`
-          : `${t('wrong')} ${earlier.short_name} (${getLabel(earlier)}) ${t('earlierThan')} ${later.short_name} (${getLabel(later)}).`;
-        setFeedback(fb);
+        setLastResult((lr) => lr && {
+          ...lr,
+          earlier: pair.earlierId === pair.a.id
+            ? { ...pair.a, short_name: ta.short_name, description: ta.description }
+            : { ...pair.b, short_name: tb.short_name, description: tb.description },
+          later: pair.earlierId === pair.a.id
+            ? { ...pair.b, short_name: tb.short_name, description: tb.description }
+            : { ...pair.a, short_name: ta.short_name, description: ta.description },
+        });
       }
     })();
   }, [lang]);
@@ -267,19 +269,26 @@ export default function Home() {
     });
   }
 
-  async function nextRound() {
+  async function nextRound(pool) {
+    const eventsPool = pool || events;
     setLastResult(null);
     setShowLoader(true);
-    const [e1, e2] = pickPair(events, shownPairsRef.current);
-    const [te1, te2] = await maybeTranslate([e1, e2]);
-    const earlierId = getEventTime(te1) < getEventTime(te2) ? te1.id : te2.id;
-    setPair({ a: te1, b: te2, earlierId });
-    setLocked(false);
-    lockedRef.current = false;
-    setFeedback('');
-    setShowNext(false);
-    setGuessState({ aState: '', bState: '' });
-    setShowLoader(false);
+    try {
+      const [e1, e2] = pickPair(eventsPool, shownPairsRef.current);
+      const [te1, te2] = await maybeTranslate([e1, e2]);
+      const earlierId = getEventTime(te1) < getEventTime(te2) ? te1.id : te2.id;
+      setPair({ a: te1, b: te2, earlierId });
+      setLocked(false);
+      lockedRef.current = false;
+      setShowNext(false);
+      setGuessState({ aState: '', bState: '' });
+    } catch (err) {
+      console.error('nextRound failed', err);
+      setInitError(t('crash') + ' ' + err.message);
+      setScreen('loading');
+    } finally {
+      setShowLoader(false);
+    }
   }
 
   function guess(side) {
@@ -293,7 +302,7 @@ export default function Home() {
     const earlier = earlierId === a.id ? a : b;
     const later = earlierId === a.id ? b : a;
 
-    setLastResult({ earlier, later, isCorrect });
+    setLastResult({ earlier, later, isCorrect, gap: Math.abs(getEventYear(earlier) - getEventYear(later)) });
 
     const correctSide = earlierId === a.id ? 'A' : 'B';
     const newGuessState = { aState: '', bState: '' };
@@ -301,15 +310,11 @@ export default function Home() {
     if (!isCorrect) {
       newGuessState[side.toLowerCase() + 'State'] = 'wrong';
       setStreak(0);
-      setFeedback(
-        `${t('wrong')} ${earlier.short_name} (${getLabel(earlier)}) ${t('earlierThan')} ${later.short_name} (${getLabel(later)}).`
-      );
     } else {
       const newScore = score + 1;
       const newStreak = streak + 1;
       setScore(newScore);
       setStreak(newStreak);
-      setFeedback(`${t('correct')} ${earlier.short_name}`);
 
       if (newStreak > 0 && newStreak % 5 === 0) {
         triggerCelebration(newStreak);
@@ -340,7 +345,6 @@ export default function Home() {
     setScore(0);
     setStreak(0);
     setLastResult(null);
-    setFeedback('');
     setGuessState({ aState: '', bState: '' });
     setShowNext(false);
     setShowWin(false);
@@ -348,7 +352,7 @@ export default function Home() {
     translationsRef.current = {};
     shownPairsRef.current = new Set();
     setScreen('game');
-    nextRound();
+    nextRound(filtered);
   }
 
   return (
@@ -388,7 +392,7 @@ export default function Home() {
 
           <StreakBar streak={streak} t={t} />
 
-          <div id="feedback">{feedback}</div>
+          {lastResult && <ResultFeedback result={lastResult} t={t} tf={tf} getLabel={getLabel} />}
 
           <div className="cards">
             <GameCard

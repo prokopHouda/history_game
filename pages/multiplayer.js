@@ -11,6 +11,8 @@ import FinalStandings from '../components/FinalStandings.js';
 import DisconnectOverlay from '../components/DisconnectOverlay.js';
 
 const MIN_EVENTS = 25;
+const TURN_TIMEOUT_MS = 45000;
+const TURN_TIMEOUT_GRACE_MS = 500;
 
 const MP_UI = {
   en: {
@@ -364,7 +366,9 @@ export default function Multiplayer() {
         setCardBState('unpicked');
       }
     } else {
-      const deadline = Date.now() + 45000;
+      const roundStartedMs = room.round_started_at ? new Date(room.round_started_at).getTime() : Date.now();
+      const deadline = roundStartedMs + TURN_TIMEOUT_MS;
+      const msLeft = Math.max(0, deadline + TURN_TIMEOUT_GRACE_MS - Date.now());
       const updateCountdown = () => {
         const remaining = Math.ceil((deadline - Date.now()) / 1000);
         if (remaining <= 0) {
@@ -384,7 +388,7 @@ export default function Multiplayer() {
         if (currentAns[playerIdRef.current] === undefined) {
           guess('timeout');
         }
-      }, 45000);
+      }, msLeft);
     }
   }, [room, screen, t]);
 

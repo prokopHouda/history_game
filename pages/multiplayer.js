@@ -503,6 +503,18 @@ export default function Multiplayer() {
           if (oldRoom?.state === 'lobby') {
             setScreen('game');
           }
+          // Show round-result overlay for non-final rounds
+          const lr = newRoom.last_result;
+          const resultRound = lr?.round || 0;
+          if (lr && resultRound > (lastShownResultRoundRef.current || 0)) {
+            lastShownResultRoundRef.current = resultRound;
+            (async () => {
+              const allEv = [lr.earlier, lr.pair[0], lr.pair[1]].filter(Boolean);
+              await ensureTranslatedLib(allEv, translationsRef.current, lang);
+              setRoundResult(newRoom);
+              setShowResultOverlay(true);
+            })();
+          }
         }
 
         if (newRoom.state === 'finished') {

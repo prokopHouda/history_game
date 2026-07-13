@@ -403,14 +403,17 @@ export default function Multiplayer() {
     })();
   }, [lang, room, ensureTranslated]);
 
-  // Result overlay auto-hide
+  // Result overlay auto-hide — reads roomRef.current to avoid
+  // resetting the timeout on every heartbeat-driven room update
   useEffect(() => {
-    if (!showResultOverlay || !room) return;
-    const lr = room.last_result;
+    if (!showResultOverlay) return;
+    const r = roomRef.current;
+    if (!r) return;
+    const lr = r.last_result;
     if (!lr) return;
     const funFact = lr.fun_fact || getTextLib(lr.earlier, translationsRef.current, lang).fun_fact || '';
     const delay = funFact ? 10000 : 3500;
-    const nextRoundAt = room.next_round_at ? new Date(room.next_round_at) : null;
+    const nextRoundAt = r.next_round_at ? new Date(r.next_round_at) : null;
     const now = new Date();
     const actualDelay = nextRoundAt ? Math.max(3000, nextRoundAt.getTime() - now.getTime()) : delay;
 
@@ -429,7 +432,7 @@ export default function Multiplayer() {
         resultHideTimeoutRef.current = null;
       }
     };
-  }, [showResultOverlay, room, lang]);
+  }, [showResultOverlay, lang]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -798,6 +801,7 @@ export default function Multiplayer() {
           translating={translating}
           onGuess={guess}
           onLangChange={changeLang}
+          getText={getText}
         />
       )}
 

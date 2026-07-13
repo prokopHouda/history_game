@@ -2,10 +2,12 @@ import LangNav from './LangNav.js';
 import Leaderboard from './Leaderboard.js';
 import MpGameCard from './MpGameCard.js';
 
-export default function GameScreen({ room, playerId, lang, t, statusText, cardAState, cardBState, translating, onGuess, onLangChange }) {
+export default function GameScreen({ room, playerId, lang, t, statusText, cardAState, cardBState, translating, onGuess, onLangChange, getText }) {
   if (!room || !room.current_pair || room.current_pair.length < 2) return null;
 
   const [a, b] = room.current_pair;
+  const ta = getText(a);
+  const tb = getText(b);
   const round = room.current_round || 1;
   const total = room.total_rounds || 10;
 
@@ -26,7 +28,7 @@ export default function GameScreen({ room, playerId, lang, t, statusText, cardAS
       <div className="cards">
         <MpGameCard
           id="mp-cardA"
-          event={a}
+          event={{ ...a, short_name: ta.short_name, description: ta.description }}
           state={cardAState}
           loading={translating}
           onClick={() => onGuess('A')}
@@ -34,7 +36,7 @@ export default function GameScreen({ room, playerId, lang, t, statusText, cardAS
         />
         <MpGameCard
           id="mp-cardB"
-          event={b}
+          event={{ ...b, short_name: tb.short_name, description: tb.description }}
           state={cardBState}
           loading={translating}
           onClick={() => onGuess('B')}

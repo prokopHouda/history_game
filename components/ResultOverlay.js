@@ -1,6 +1,7 @@
 import RoundLeaderboard from './RoundLeaderboard.js';
+import CountryFlags from './CountryFlags.js';
 
-export default function ResultOverlay({ result, room, playerId, t, earlierText, pairTextA, pairTextB, funFactText }) {
+export default function ResultOverlay({ result, room, playerId, t, earlierText, pairTextA, pairTextB, funFactText, lang }) {
   if (!result || !result.answered) return null;
 
   const myAns = result.answered[playerId];
@@ -25,11 +26,13 @@ export default function ResultOverlay({ result, room, playerId, t, earlierText, 
         <div id="mp-result-pair" style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
+              <CountryFlags countries={pairTextA.countries} lang={lang} t={t} />
               <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{pairTextA.short_name}</div>
               <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{pairTextA.date}</div>
             </div>
             <div style={{ color: '#94a3b8' }}>vs</div>
             <div style={{ textAlign: 'center' }}>
+              <CountryFlags countries={pairTextB.countries} lang={lang} t={t} />
               <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{pairTextB.short_name}</div>
               <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{pairTextB.date}</div>
             </div>

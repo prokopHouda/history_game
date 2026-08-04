@@ -404,6 +404,8 @@ export default function Home() {
               state={guessState.aState}
               onClick={() => guess('A')}
               ariaLabel="Pick this event as earlier"
+              lang={lang}
+              t={t}
             />
             <GameCard
               id="cardB"
@@ -413,6 +415,8 @@ export default function Home() {
               state={guessState.bState}
               onClick={() => guess('B')}
               ariaLabel="Pick this event as earlier"
+              lang={lang}
+              t={t}
             />
           </div>
 

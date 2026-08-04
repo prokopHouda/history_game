@@ -734,8 +734,8 @@ export default function Multiplayer() {
     resultOverlayData = {
       result: lr,
       earlierText,
-      pairTextA: { short_name: ta.short_name, date: a.date || a.year },
-      pairTextB: { short_name: tb.short_name, date: b.date || b.year },
+      pairTextA: { short_name: ta.short_name, date: a.date || a.year, countries: a.countries },
+      pairTextB: { short_name: tb.short_name, date: b.date || b.year, countries: b.countries },
       funFactText,
     };
   }
@@ -815,6 +815,7 @@ export default function Multiplayer() {
           pairTextA={resultOverlayData.pairTextA}
           pairTextB={resultOverlayData.pairTextB}
           funFactText={resultOverlayData.funFactText}
+          lang={lang}
         />
       )}
 

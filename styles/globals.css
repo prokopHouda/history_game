@@ -354,6 +354,78 @@ h1 {
   display: none;
   letter-spacing: 0.02em;
 }
+
+/* ─── Country Flags ─── */
+.country-flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  position: relative;
+}
+.country-flag {
+  font-size: 1.4rem;
+  line-height: 1;
+  display: inline-block;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.18));
+  cursor: default;
+  user-select: none;
+}
+.country-flags-more {
+  position: relative;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #475569;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.25);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  cursor: help;
+  white-space: nowrap;
+}
+.country-flags-more:focus {
+  outline: 2px solid #818cf8;
+  outline-offset: 1px;
+}
+/* On dark backgrounds (e.g. multiplayer result overlay) use lighter text */
+.win-content .country-flags-more {
+  color: #c7d2fe;
+  background: rgba(129,140,248,0.15);
+  border-color: rgba(129,140,248,0.35);
+}
+.country-flags-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  background: #1e293b;
+  border: 1px solid rgba(129,140,248,0.35);
+  border-radius: 12px;
+  padding: 0.5rem 0.65rem;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 160px;
+  max-width: 220px;
+}
+.country-flags-more:hover .country-flags-tooltip,
+.country-flags-more:focus .country-flags-tooltip {
+  display: flex;
+}
+.country-flags-tooltip-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+.country-flags-tooltip-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
 .vs {
   text-align: center;
   margin: 1.25rem 0;

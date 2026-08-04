@@ -1,6 +1,7 @@
 import { onCardKey } from '../lib/onCardKey.js';
+import CountryFlags from './CountryFlags.js';
 
-export default function MpGameCard({ id, event, state, loading, onClick, ariaLabel }) {
+export default function MpGameCard({ id, event, state, loading, onClick, ariaLabel, lang, t }) {
   const className = `card${state ? ` ${state}` : ''}`;
   const handleKey = onCardKey(onClick);
 
@@ -20,6 +21,9 @@ export default function MpGameCard({ id, event, state, loading, onClick, ariaLab
           <div className="spinner" style={{ width: '28px', height: '28px', margin: '0.5rem auto' }} />
         </div>
       )}
+      <div style={{ display: loading ? 'none' : '' }}>
+        <CountryFlags countries={event?.countries} lang={lang} t={t} />
+      </div>
       <h2 style={{ display: loading ? 'none' : '' }}>{event?.short_name || ''}</h2>
       <p style={{ display: loading ? 'none' : '' }}>{event?.description || ''}</p>
     </div>

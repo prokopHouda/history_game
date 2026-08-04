@@ -33,6 +33,8 @@ export default function GameScreen({ room, playerId, lang, t, statusText, cardAS
           loading={translating}
           onClick={() => onGuess('A')}
           ariaLabel="Pick this event as earlier"
+          lang={lang}
+          t={t}
         />
         <MpGameCard
           id="mp-cardB"
@@ -41,6 +43,8 @@ export default function GameScreen({ room, playerId, lang, t, statusText, cardAS
           loading={translating}
           onClick={() => onGuess('B')}
           ariaLabel="Pick this event as earlier"
+          lang={lang}
+          t={t}
         />
       </div>
     </div>

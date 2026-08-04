@@ -318,15 +318,16 @@ pages/
 │   └── translate.js      # DeepL proxy + Supabase cache
 components/
 ├── SettingsPanel.js      # SP: filter form (year/region/country/lang + pool counter)
-├── GameCard.js           # SP: event card (name, desc, meta, click/keyboard, states)
+├── GameCard.js           # SP: event card (flags, name, desc, meta, click/keyboard, states)
+├── CountryFlags.js       # Shared: flag emoji row from `countries` ISO codes (max 5 + "+N countries" hover tooltip)
 ├── StreakBar.js          # SP: progress bar + milestone text
 ├── Hud.js                # SP: score + streak badges
 ├── LangNav.js            # Shared: EN/CS/IT language buttons
 ├── Lobby.js              # MP: create/join room form (filters + rounds + room code)
 ├── WaitingRoom.js        # MP: player list, profile editor, host start button
 ├── GameScreen.js         # MP: cards + leaderboard + round info + status
-├── MpGameCard.js         # MP: card with check mark + loading spinner
-├── ResultOverlay.js     # MP: round result overlay (result + pair + fun fact + round leaderboard)
+├── MpGameCard.js         # MP: card with flags + check mark + loading spinner
+├── ResultOverlay.js     # MP: round result overlay (result + pair with flags + fun fact + round leaderboard)
 ├── FinalStandings.js     # MP: winner overlay with standings + restart/lobby buttons
 ├── DisconnectOverlay.js  # MP: room closed overlay
 ├── Leaderboard.js        # MP: in-game leaderboard (sorted players with scores)
@@ -336,7 +337,7 @@ components/
 lib/
 ├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, MIN_GAP_YEARS=10)
 ├── eventTime.js          # Shared getEventYear() / getEventTime() — single source of truth for event dating
-├── i18n.js               # Shared base UI text (10 keys × 3 langs) + makeT() accessor factory
+├── i18n.js               # Shared base UI text (12 keys × 3 langs) + makeT() accessor factory
 ├── filters.js            # Shared filterEvents() + getUniqueRegionsAndCountries()
 ├── translate.js          # Shared ensureTranslated() / getText() — fetch + cache translations
 ├── onCardKey.js           # Shared keyboard handler factory (Enter/Space → click)

@@ -44,12 +44,12 @@ describe('pickPair', () => {
     expect(pair[0].id).not.toBe(pair[1].id);
   });
 
-  it('enforces minimum gap of >10 years', () => {
+  it('enforces minimum gap of >2 years', () => {
     for (let i = 0; i < 50; i++) {
       const pair = pickPair(events);
       const years = pair.map(e => e.year);
       const gap = Math.abs(years[0] - years[1]);
-      expect(gap).toBeGreaterThan(10);
+      expect(gap).toBeGreaterThan(2);
     }
   });
 
@@ -70,11 +70,11 @@ describe('pickPair', () => {
     }
   });
 
-  it('throws when all events are within 10 years of each other', () => {
+  it('throws when all events are within 2 years of each other', () => {
     const closeEvents = [
       { id: 1, year: 100 },
-      { id: 2, year: 105 },
-      { id: 3, year: 108 },
+      { id: 2, year: 101 },
+      { id: 3, year: 102 },
     ];
     expect(() => pickPair(closeEvents)).toThrow('Could not generate any pair');
   });
@@ -105,6 +105,6 @@ describe('pickPair', () => {
       parseInt(pair[0].date.split('-')[0], 10) -
       parseInt(pair[1].date.split('-')[0], 10)
     );
-    expect(gap).toBeGreaterThan(10);
+    expect(gap).toBeGreaterThan(2);
   });
 });

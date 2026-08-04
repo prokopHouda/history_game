@@ -7,7 +7,7 @@ function upper(code) {
 function flagSrc(code, size = 40) {
   const u = upper(code);
   if (!/^[A-Z]{2}$/.test(u)) return '';
-  return `https://flagcdn.com/${size}/${u.toLowerCase()}.png`;
+  return `https://flagcdn.com/w${size}/${u.toLowerCase()}.png`;
 }
 
 function countryName(code, lang) {

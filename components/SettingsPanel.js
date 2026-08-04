@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { filterEvents, getUniqueRegionsAndCountries } from '../lib/filters.js';
 import RegionSelect from './RegionSelect.js';
 
-export default function SettingsPanel({ allEvents, lang, t, MIN_EVENTS, onStart }) {
+export default function SettingsPanel({ allEvents, lang, t, tf, MIN_EVENTS, onStart }) {
   const [startYear, setStartYear] = useState('');
   const [endYear, setEndYear] = useState('');
   const [region, setRegion] = useState('');

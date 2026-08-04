@@ -379,6 +379,7 @@ export default function Home() {
           allEvents={allEvents}
           lang={lang}
           t={t}
+          tf={tf}
           MIN_EVENTS={MIN_EVENTS}
           onStart={handleStart}
         />

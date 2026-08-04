@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { filterEvents, getUniqueRegionsAndCountries } from '../lib/filters.js';
+import RegionSelect from './RegionSelect.js';
 
 export default function Lobby({ allEvents, lang, t, tf, MIN_EVENTS, onCreate, onJoin, creating, error }) {
   const [startYear, setStartYear] = useState('');
@@ -82,10 +83,14 @@ export default function Lobby({ allEvents, lang, t, tf, MIN_EVENTS, onCreate, on
 
       <div className="field">
         <label htmlFor="mp-regionFilter">{t('region')}</label>
-        <select id="mp-regionFilter" value={region} onChange={(e) => { setRegion(e.target.value); setLocalError(''); }}>
-          <option value="">{t('allRegions')}</option>
-          {regions.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <RegionSelect
+          id="mp-regionFilter"
+          value={region}
+          onChange={(v) => { setRegion(v); setLocalError(''); }}
+          regions={regions}
+          t={t}
+          tf={tf}
+        />
       </div>
 
       <div className="field">

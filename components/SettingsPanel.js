@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { filterEvents, getUniqueRegionsAndCountries } from '../lib/filters.js';
+import RegionSelect from './RegionSelect.js';
 
 export default function SettingsPanel({ allEvents, lang, t, MIN_EVENTS, onStart }) {
   const [startYear, setStartYear] = useState('');
@@ -74,12 +75,14 @@ export default function SettingsPanel({ allEvents, lang, t, MIN_EVENTS, onStart 
 
       <div className="field">
         <label htmlFor="regionFilter">{t('region')}</label>
-        <select id="regionFilter" value={region} onChange={(e) => updateRegion(e.target.value)}>
-          <option value="">{t('allRegions')}</option>
-          {regions.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
+        <RegionSelect
+          id="regionFilter"
+          value={region}
+          onChange={updateRegion}
+          regions={regions}
+          t={t}
+          tf={tf}
+        />
       </div>
 
       <div className="field">

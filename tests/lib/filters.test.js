@@ -45,6 +45,20 @@ describe('filterEvents', () => {
     expect(result[0].id).toBe(5);
   });
 
+  it('filters by continent (matches any event touching a sub-region of it)', () => {
+    const europe = filterEvents(sampleEvents, { region: 'Europe' });
+    expect(europe.map(e => e.id).sort()).toEqual([1, 3, 5]);
+
+    const americas = filterEvents(sampleEvents, { region: 'Americas' });
+    expect(americas).toHaveLength(0);
+  });
+
+  it('continent filter matches multi-region events spanning the continent', () => {
+    // id 5 spans Western Europe + Southern Europe -> Europe continent matches it
+    const europe = filterEvents(sampleEvents, { region: 'Europe' });
+    expect(europe.some(e => e.id === 5)).toBe(true);
+  });
+
   it('filters by country', () => {
     const result = filterEvents(sampleEvents, { country: 'CZ' });
     expect(result).toHaveLength(2);

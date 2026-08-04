@@ -73,7 +73,8 @@ h1 {
 }
 .field input:focus,
 .field select:focus { border-color: #818cf8; }
-.field select option { background: #1e1b4b; color: #f8fafc; }
+.field select optgroup { background: #1e1b4b; color: #c7d2fe; font-weight: 700; }
+.field select option { background: #1e1b4b; color: #f8fafc; font-weight: 400; }
 
 .field-row {
   display: grid;

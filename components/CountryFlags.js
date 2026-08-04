@@ -1,26 +1,24 @@
 const MAX_FLAGS = 5;
 
-function flagEmoji(code) {
-  const upper = code.toUpperCase();
-  if (!/^[A-Z]{2}$/.test(upper)) return '';
-  return String.fromCodePoint(
-    upper.charCodeAt(0) - 65 + 0x1f1e6,
-    upper.charCodeAt(1) - 65 + 0x1f1e6,
-  );
+function upper(code) {
+  return code.trim().toUpperCase();
+}
+
+function flagSrc(code, size = 40) {
+  const u = upper(code);
+  if (!/^[A-Z]{2}$/.test(u)) return '';
+  return `https://flagcdn.com/${size}/${u.toLowerCase()}.png`;
 }
 
 function countryName(code, lang) {
+  const u = upper(code);
   try {
     const dn = new Intl.DisplayNames([lang], { type: 'region' });
-    const name = dn.of(upper(code));
-    return name || code;
+    const name = dn.of(u);
+    return name || u;
   } catch (e) {
-    return code;
+    return u;
   }
-}
-
-function upper(code) {
-  return code.trim().toUpperCase();
 }
 
 export default function CountryFlags({ countries, lang, t }) {
@@ -40,14 +38,15 @@ export default function CountryFlags({ countries, lang, t }) {
   return (
     <div className="country-flags" aria-label={tooltipLabel}>
       {visible.map((code) => (
-        <span
+        <img
           key={code}
           className="country-flag"
+          src={flagSrc(code)}
+          alt={countryName(code, lang)}
           title={countryName(code, lang)}
-          aria-label={countryName(code, lang)}
-        >
-          {flagEmoji(code)}
-        </span>
+          loading="lazy"
+          draggable={false}
+        />
       ))}
       {extra > 0 && (
         <span
@@ -61,7 +60,14 @@ export default function CountryFlags({ countries, lang, t }) {
           <span className="country-flags-tooltip">
             {codes.map((code) => (
               <span key={code} className="country-flags-tooltip-item">
-                <span className="country-flag">{flagEmoji(code)}</span>
+                <img
+                  className="country-flag"
+                  src={flagSrc(code)}
+                  alt={countryName(code, lang)}
+                  title={countryName(code, lang)}
+                  loading="lazy"
+                  draggable={false}
+                />
                 <span className="country-flags-tooltip-name">{countryName(code, lang)}</span>
               </span>
             ))}

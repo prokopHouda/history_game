@@ -6,7 +6,7 @@ export const asiaBatch = [
     description:
       "The Tang dynasty is founded, ushering in a golden age of Chinese poetry, trade, and cosmopolitan culture centered on Chang'an.",
     countries: "CN",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact:
       "Chang'an was likely the largest city in the world during the Tang era, with over a million residents.",
   },
@@ -17,7 +17,7 @@ export const asiaBatch = [
     description:
       "Kublai Khan establishes the Yuan dynasty, ruling China under Mongol leadership and encouraging overland Silk Road trade.",
     countries: "CN, MN",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact:
       "Marco Polo reportedly served as an official in Kublai Khan's court during this period.",
   },
@@ -28,7 +28,7 @@ export const asiaBatch = [
     description:
       "Yi Song-gye overthrows Goryeo and founds the Joseon dynasty, which rules Korea for over five centuries and promotes Confucian governance.",
     countries: "KR",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact:
       "Joseon's rulers commissioned the Hangul alphabet in the 1440s to boost literacy.",
   },
@@ -39,7 +39,7 @@ export const asiaBatch = [
     description:
       "Babur defeats the Lodi sultanate at Panipat and founds the Mughal Empire, which dominates the Indian subcontinent for centuries.",
     countries: "IN",
-    region: "Asia",
+    region: "Southern Asia",
     fun_fact:
       "The Mughals introduced the cannon to North Indian warfare at the Battle of Panipat.",
   },
@@ -50,7 +50,7 @@ export const asiaBatch = [
     description:
       "Manchu forces capture Beijing and the Qing dynasty begins, eventually ruling the largest imperial Chinese territory.",
     countries: "CN",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact:
       "The Qing enforced the queue hairstyle on Han Chinese men as a sign of submission.",
   },
@@ -61,7 +61,7 @@ export const asiaBatch = [
     description:
       "US Commodore Matthew Perry's 'black ships' arrive in Edo Bay, pressuring Tokugawa Japan to end over 200 years of isolation.",
     countries: "JP",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact:
       "Japan's isolation policy, sakoku, had limited foreign contact since the 1630s.",
   },
@@ -72,7 +72,7 @@ export const asiaBatch = [
     description:
       "Emperor Meiji is restored to power, launching rapid modernization, industrialization, and the end of the Tokugawa shogunate.",
     countries: "JP",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact:
       "The samurai class was formally abolished within a decade of the restoration.",
   },
@@ -83,7 +83,7 @@ export const asiaBatch = [
     description:
       "Emilio Aguinaldo declares Philippine independence from Spain, the first republic in Asia, though the US soon takes control.",
     countries: "PH",
-    region: "Asia",
+    region: "South-Eastern Asia",
     fun_fact:
       "The declaration was read from Aguinaldo's home balcony in Cavite.",
   },
@@ -94,7 +94,7 @@ export const asiaBatch = [
     description:
       "Britain withdraws from the subcontinent; India and Pakistan become independent nations amid mass population transfers.",
     countries: "IN, PK",
-    region: "Asia",
+    region: "Southern Asia",
     fun_fact:
       "The border partition was drawn by a British lawyer who had never visited India.",
   },
@@ -105,7 +105,7 @@ export const asiaBatch = [
     description:
       "Mao Zedong proclaims the People's Republic of China in Beijing after the Chinese Communist Party wins the civil war.",
     countries: "CN",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact:
       "The proclamation was made from atop Tiananmen Gate on October 1.",
   },
@@ -116,7 +116,7 @@ export const asiaBatch = [
     description:
       "The Pahlavi monarchy falls and Ayatollah Khomeini establishes the Islamic Republic, transforming Iran's politics and society.",
     countries: "IR",
-    region: "Asia",
+    region: "Western Asia",
     fun_fact:
       "The revolution produced one of the largest mass demonstrations in modern history.",
   },

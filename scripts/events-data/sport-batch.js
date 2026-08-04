@@ -6,7 +6,7 @@ export const sportBatch = [
     description:
       "The schooner America beats the Royal Yacht Squadron in a race around the Isle of Wight, launching the oldest trophy in international sport.",
     countries: "GB, US",
-    region: "Europe",
+    region: "Northern Europe, Northern America",
     fun_fact:
       "The trophy was originally called the RYS Cup before being renamed after the winning boat.",
   },
@@ -17,7 +17,7 @@ export const sportBatch = [
     description:
       "Wanderers beat Royal Engineers 1-0 at Kennington Oval in the first Football Association Challenge Cup final.",
     countries: "GB",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "The winning goal was scored by Morton Betts under the pseudonym A.H. Chequer.",
   },
@@ -28,7 +28,7 @@ export const sportBatch = [
     description:
       "Australia defeats England in Melbourne in the first officially recognized Test cricket match.",
     countries: "AU",
-    region: "Oceania",
+    region: "Australia & New Zealand",
     fun_fact:
       "England had to wait until 1880 to win its first Test on home soil.",
   },
@@ -39,7 +39,7 @@ export const sportBatch = [
     description:
       "The All England Club holds its first lawn tennis championship at Worple Road; Spencer Gore wins the gentlemen's singles.",
     countries: "GB",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "The trophy awarded then is still presented to the men's champion today.",
   },
@@ -50,7 +50,7 @@ export const sportBatch = [
     description:
       "Baron Pierre de Coubertin organizes the first modern Olympic Games in Athens, with 14 nations competing.",
     countries: "GR",
-    region: "Europe",
+    region: "Southern Europe",
     fun_fact:
       "Winners received silver medals; gold medals were only introduced in 1904.",
   },
@@ -61,7 +61,7 @@ export const sportBatch = [
     description:
       "Inspired by the Olympic marathon, the first Boston Marathon is run over 24.5 miles from Ashland to Boston.",
     countries: "US",
-    region: "Americas",
+    region: "Northern America",
     fun_fact: "It is the world's oldest annual marathon.",
   },
   {
@@ -71,7 +71,7 @@ export const sportBatch = [
     description:
       "Maurice Garin wins the inaugural Tour de France, a six-stage race covering 2,428 km.",
     countries: "FR",
-    region: "Europe",
+    region: "Western Europe",
     fun_fact: "Only 21 of the 60 starters reached Paris.",
   },
   {
@@ -81,7 +81,7 @@ export const sportBatch = [
     description:
       "22 clubs break from the RFU to form the Northern Union (rugby league), allowing payments to players.",
     countries: "GB",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "The split was triggered by disputes over broken time payments for missed work.",
   },
@@ -92,7 +92,7 @@ export const sportBatch = [
     description:
       "The Pittsburgh Pirates and Boston Americans play the first modern World Series, won by Boston 5-3.",
     countries: "US",
-    region: "Americas",
+    region: "Northern America",
     fun_fact:
       "It almost didn't happen; a prior inter-league agreement had collapsed.",
   },
@@ -103,7 +103,7 @@ export const sportBatch = [
     description:
       "Athens hosts an intercalated Olympics intended to bridge the four-year gap; later not counted in official IOC records.",
     countries: "GR",
-    region: "Europe",
+    region: "Southern Europe",
     fun_fact:
       "The 1906 medals are not recognized in modern official IOC medal tables.",
   },
@@ -114,7 +114,7 @@ export const sportBatch = [
     description:
       "Paul Deman wins the inaugural Tour of Flanders, a classic one-day cycling race.",
     countries: "BE",
-    region: "Europe",
+    region: "Western Europe",
     fun_fact: "It was originally held on the same day as Milan-San Remo.",
   },
   {
@@ -124,7 +124,7 @@ export const sportBatch = [
     description:
       "Argentina hosts the South American Championship (later Copa America), the oldest continental football tournament.",
     countries: "AR",
-    region: "Americas",
+    region: "South America",
     fun_fact:
       "Uruguay won the inaugural edition held during independence centenary celebrations.",
   },
@@ -135,7 +135,7 @@ export const sportBatch = [
     description:
       "The National Hockey League is founded in Montreal, replacing the National Hockey Association.",
     countries: "CA",
-    region: "Americas",
+    region: "Northern America",
     fun_fact:
       "The NHL's first goal was scored by Dave Ritchie of the Montreal Wanderers.",
   },
@@ -146,7 +146,7 @@ export const sportBatch = [
     description:
       "Ray Harroun wins the inaugural Indianapolis 500 at an average speed of 74.6 mph.",
     countries: "US",
-    region: "Americas",
+    region: "Northern America",
     fun_fact:
       "Harroun's car, the Marmon Wasp, was the first to use a rear-view mirror.",
   },
@@ -157,7 +157,7 @@ export const sportBatch = [
     description:
       "Eight Chicago White Sox players are accused of conspiring to fix the World Series, leading to lifetime bans.",
     countries: "US",
-    region: "Americas",
+    region: "Northern America",
     fun_fact:
       "Shoeless Joe Jackson hit .375 in the series but was still banned.",
   },
@@ -168,7 +168,7 @@ export const sportBatch = [
     description:
       "Chamonix hosts the International Winter Sports Week, retroactively recognized as the first Olympic Winter Games.",
     countries: "FR",
-    region: "Europe",
+    region: "Western Europe",
     fun_fact:
       "The Games were only officially designated Winter Olympics in 1925.",
   },
@@ -179,7 +179,7 @@ export const sportBatch = [
     description:
       "Uruguay hosts and wins the inaugural FIFA World Cup, defeating Argentina 4-2 in Montevideo.",
     countries: "UY",
-    region: "Americas",
+    region: "South America",
     fun_fact:
       "Only 13 teams took part; most European teams declined the long trip.",
   },
@@ -190,7 +190,7 @@ export const sportBatch = [
     description:
       "American sprinter Jesse Owens wins four gold medals at the Berlin Olympics, undermining Nazi racial ideology.",
     countries: "DE",
-    region: "Europe",
+    region: "Western Europe",
     fun_fact:
       "Owens was never officially congratulated by the US president on his return.",
   },
@@ -201,7 +201,7 @@ export const sportBatch = [
     description:
       "The Berlin Games become the first to be televised, with broadcasts reaching public viewing rooms across Berlin.",
     countries: "DE",
-    region: "Europe",
+    region: "Western Europe",
     fun_fact: "Only 25 viewing rooms existed, showing limited highlights.",
   },
   {
@@ -211,7 +211,7 @@ export const sportBatch = [
     description:
       "The New York Knicks beat the Toronto Huskies 68-66 in the first game of the Basketball Association of America, the NBA's predecessor.",
     countries: "US",
-    region: "Americas",
+    region: "Northern America",
     fun_fact:
       "Players had to wear numbers; any player under 6'8 was allowed.",
   },
@@ -222,7 +222,7 @@ export const sportBatch = [
     description:
       "Giuseppe Farina wins the first FIA Formula 1 World Championship race at Silverstone.",
     countries: "GB",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "The race included 21 drivers; Farina also won the title that year.",
   },
@@ -233,7 +233,7 @@ export const sportBatch = [
     description:
       "New Delhi hosts the inaugural Asian Games, featuring 11 nations and 6 sports.",
     countries: "IN",
-    region: "Asia",
+    region: "Southern Asia",
     fun_fact: "Japan topped the medal table with 24 golds.",
   },
   {
@@ -243,7 +243,7 @@ export const sportBatch = [
     description:
       "Buenos Aires hosts the first Pan American Games, with 21 nations participating.",
     countries: "AR",
-    region: "Americas",
+    region: "South America",
     fun_fact: "A planned 1942 edition was cancelled due to World War II.",
   },
   {
@@ -253,7 +253,7 @@ export const sportBatch = [
     description:
       "Sudan hosts the inaugural Africa Cup of Nations, won by Egypt.",
     countries: "SD",
-    region: "Africa",
+    region: "Northern Africa",
     fun_fact:
       "Only three teams took part after South Africa was excluded due to apartheid.",
   },
@@ -264,7 +264,7 @@ export const sportBatch = [
     description:
       "The European Nations Cup (later UEFA Euro) is first held; the Soviet Union beats Yugoslavia 2-1 in Paris.",
     countries: "FR",
-    region: "Europe",
+    region: "Western Europe",
     fun_fact: "Only 4 teams reached the final tournament.",
   },
   {
@@ -274,7 +274,7 @@ export const sportBatch = [
     description:
       "Rome hosts the Olympics where Cassius Clay wins boxing gold and Abebe Bikila runs the marathon barefoot.",
     countries: "IT",
-    region: "Europe",
+    region: "Southern Europe",
     fun_fact: "Bikila became the first black African to win Olympic gold.",
   },
   {
@@ -284,7 +284,7 @@ export const sportBatch = [
     description:
       "Rome hosts the first Paralympic Games, open to wheelchair athletes with spinal cord injuries.",
     countries: "IT",
-    region: "Europe",
+    region: "Southern Europe",
     fun_fact: "400 athletes from 23 countries competed in 8 sports.",
   },
   {
@@ -294,7 +294,7 @@ export const sportBatch = [
     description:
       "Real Madrid beats Reims 4-3 in Paris to win the first European Champion Clubs Cup.",
     countries: "FR",
-    region: "Europe",
+    region: "Western Europe",
     fun_fact: "Real Madrid would win the first five editions in a row.",
   },
   {
@@ -304,7 +304,7 @@ export const sportBatch = [
     description:
       "Diego Maradona scores two iconic goals, hand and dribble, against England in the World Cup quarterfinal.",
     countries: "MX",
-    region: "Americas",
+    region: "Central America",
     fun_fact: "The second goal was later voted FIFA's Goal of the Century.",
   },
   {
@@ -314,7 +314,7 @@ export const sportBatch = [
     description:
       "The first Olympics held in Latin America feature Bob Beamon's long-jump record and the Black Power salute.",
     countries: "MX",
-    region: "Americas",
+    region: "Central America",
     fun_fact:
       "Beamon's 8.90 m jump beat the record by 55 cm; it stood for 23 years.",
   },
@@ -325,7 +325,7 @@ export const sportBatch = [
     description:
       "Palestinian militants kill 11 Israeli athletes and a German policeman at the Munich Olympics.",
     countries: "DE",
-    region: "Europe",
+    region: "Western Europe",
     fun_fact: "The Games were suspended for 34 hours before resuming.",
   },
   {
@@ -335,7 +335,7 @@ export const sportBatch = [
     description:
       "Montreal hosts the first Olympics in Canada; Nadia Comaneci scores the first perfect 10 in gymnastics.",
     countries: "CA",
-    region: "Americas",
+    region: "Northern America",
     fun_fact: "Comaneci received 7 perfect 10s in those Games.",
   },
   {
@@ -345,7 +345,7 @@ export const sportBatch = [
     description:
       "The US amateur ice hockey team defeats the Soviet Union 4-3 at the Lake Placid Winter Olympics.",
     countries: "US",
-    region: "Americas",
+    region: "Northern America",
     fun_fact: "The USSR had won 4 of the previous 5 Olympic golds.",
   },
   {
@@ -355,7 +355,7 @@ export const sportBatch = [
     description:
       "Helsinki hosts the inaugural World Athletics Championships, with 1,555 athletes from 153 countries.",
     countries: "FI",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact: "Carl Lewis won three golds and a relay silver.",
   },
   {
@@ -365,7 +365,7 @@ export const sportBatch = [
     description:
       "New Zealand hosts and wins the first Rugby World Cup, beating France 29-9 in Auckland.",
     countries: "NZ, AU",
-    region: "Oceania",
+    region: "Australia & New Zealand",
     fun_fact:
       "16 teams took part; New Zealand's David Kirk lifted the Webb Ellis Cup.",
   },
@@ -376,7 +376,7 @@ export const sportBatch = [
     description:
       "The Prudential Cup, the first Cricket World Cup, is held in England; the West Indies beat Australia.",
     countries: "GB",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "Each innings comprised 60 overs; Sri Lanka was a non-Test participant.",
   },
@@ -387,7 +387,7 @@ export const sportBatch = [
     description:
       "China hosts the inaugural FIFA Women's World Cup; the United States beat Norway 2-1 in the final.",
     countries: "CN",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact: "Only 12 teams participated in the first edition.",
   },
   {
@@ -397,7 +397,7 @@ export const sportBatch = [
     description:
       "South Korea and Japan co-host the first FIFA World Cup held in Asia; Brazil win their fifth title.",
     countries: "KR, JP",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact: "It was the first World Cup co-hosted by two nations.",
   },
   {
@@ -407,7 +407,7 @@ export const sportBatch = [
     description:
       "Beijing hosts the Summer Olympics, where Michael Phelps wins 8 gold medals in a single Games.",
     countries: "CN",
-    region: "Asia",
+    region: "Eastern Asia",
     fun_fact:
       "Phelps broke Mark Spitz's record of 7 golds from Munich 1972.",
   },
@@ -418,7 +418,7 @@ export const sportBatch = [
     description:
       "Usain Bolt runs 9.58 s for 100 m at the World Championships in Berlin, the current world record.",
     countries: "JM",
-    region: "Americas",
+    region: "Caribbean",
     fun_fact:
       "Bolt ran despite slowing down to celebrate in his 2008 Olympic 100 m.",
   },
@@ -429,7 +429,7 @@ export const sportBatch = [
     description:
       "Singapore hosts the first Youth Olympic Summer Games, with 3,528 young athletes aged 14-18.",
     countries: "SG",
-    region: "Asia",
+    region: "South-Eastern Asia",
     fun_fact:
       "The Games were intended to combine sport with cultural and educational programs.",
   },
@@ -440,7 +440,7 @@ export const sportBatch = [
     description:
       "London hosts the Olympics for the third time; Saudi Arabia, Brunei and Qatar send female athletes for the first time.",
     countries: "GB",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact: "It was the first Games where every country sent women.",
   },
   {
@@ -450,7 +450,7 @@ export const sportBatch = [
     description:
       "Finland hosts the first Bandy World Championship, with Sweden winning the men's title.",
     countries: "FI",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "Bandy is played on ice with a small ball and 11 players per side.",
   },
@@ -461,7 +461,7 @@ export const sportBatch = [
     description:
       "London hosts the first World Table Tennis Championships; Hungary wins the men's team title.",
     countries: "GB",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "It was held annually until 1957, then switched to biennial.",
   },
@@ -472,7 +472,7 @@ export const sportBatch = [
     description:
       "Malmo hosts the first IBF World Championships; Indonesia dominates the men's events.",
     countries: "SE",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "It was held jointly with the World Badminton Championships in early years.",
   },
@@ -483,7 +483,7 @@ export const sportBatch = [
     description:
       "The first official Grand National steeplechase is run at Aintree; Lottery wins.",
     countries: "GB",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "It moved to its current layout in 1886; the race is 4 miles 514 yards.",
   },
@@ -494,7 +494,7 @@ export const sportBatch = [
     description:
       "The Marquess of Queensberry rules are published, introducing gloves and 3-minute rounds to boxing.",
     countries: "GB",
-    region: "Europe",
+    region: "Northern Europe",
     fun_fact:
       "The rules were drafted by John Chambers and endorsed by the Marquess.",
   },
@@ -505,7 +505,7 @@ export const sportBatch = [
     description:
       "The United States beats Great Britain in the inaugural Ryder Cup golf matches at Worcester Country Club.",
     countries: "US, GB",
-    region: "Americas",
+    region: "Northern America, Northern Europe",
     fun_fact:
       "The US won 9.5-2.5, beginning decades of American dominance.",
   },
@@ -516,7 +516,7 @@ export const sportBatch = [
     description:
       "The Montreal AAA wins the first Stanley Cup, then a challenge trophy for Canadian amateur hockey.",
     countries: "CA",
-    region: "Americas",
+    region: "Northern America",
     fun_fact: "Lord Stanley never saw a Stanley Cup game in person.",
   },
   {
@@ -526,7 +526,7 @@ export const sportBatch = [
     description:
       "Jerry West of the LA Lakers becomes the first (and still only) Finals MVP from a losing team.",
     countries: "US",
-    region: "Americas",
+    region: "Northern America",
     fun_fact:
       "The award was introduced in 1969; West's Lakers lost in 7 games.",
   },

@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { filterEvents, getUniqueRegionsAndCountries } from '../../lib/filters.js';
 
 const sampleEvents = [
-  { id: 1, year: 100, region: 'Europe', countries: 'CZ, SK' },
-  { id: 2, year: 200, region: 'Asia', countries: 'CN' },
-  { id: 3, year: 300, region: 'Europe', countries: 'CZ' },
-  { id: 4, year: 400, region: 'Africa', countries: 'EG' },
-  { id: 5, year: 500, region: 'Europe', countries: 'FR, DE, IT' },
+  { id: 1, year: 100, region: 'Eastern Europe', countries: 'CZ, SK' },
+  { id: 2, year: 200, region: 'Eastern Asia', countries: 'CN' },
+  { id: 3, year: 300, region: 'Eastern Europe', countries: 'CZ' },
+  { id: 4, year: 400, region: 'Northern Africa', countries: 'EG' },
+  { id: 5, year: 500, region: 'Western Europe, Southern Europe, Western Europe', countries: 'FR, DE, IT' },
 ];
 
 describe('filterEvents', () => {
@@ -34,9 +34,15 @@ describe('filterEvents', () => {
   });
 
   it('filters by region', () => {
-    const result = filterEvents(sampleEvents, { region: 'Europe' });
-    expect(result).toHaveLength(3);
-    expect(result.every(e => e.region === 'Europe')).toBe(true);
+    const result = filterEvents(sampleEvents, { region: 'Eastern Europe' });
+    expect(result).toHaveLength(2);
+    expect(result.map(e => e.id)).toEqual([1, 3]);
+  });
+
+  it('matches multi-region events', () => {
+    const result = filterEvents(sampleEvents, { region: 'Southern Europe' });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(5);
   });
 
   it('filters by country', () => {
@@ -55,7 +61,7 @@ describe('filterEvents', () => {
     const result = filterEvents(sampleEvents, {
       startYear: 100,
       endYear: 300,
-      region: 'Europe',
+      region: 'Eastern Europe',
       country: 'CZ',
     });
     expect(result).toHaveLength(2);
@@ -63,21 +69,21 @@ describe('filterEvents', () => {
   });
 
   it('returns empty when no events match', () => {
-    const result = filterEvents(sampleEvents, { region: 'Oceania' });
+    const result = filterEvents(sampleEvents, { region: 'Australia & New Zealand' });
     expect(result).toHaveLength(0);
   });
 
   it('handles events with date instead of year', () => {
     const events = [
-      { id: 1, date: '1945-08-06', region: 'Asia', countries: 'JP' },
-      { id: 2, year: 1900, region: 'Europe', countries: 'FR' },
+      { id: 1, date: '1945-08-06', region: 'Eastern Asia', countries: 'JP' },
+      { id: 2, year: 1900, region: 'Western Europe', countries: 'FR' },
     ];
     const result = filterEvents(events, { startYear: 1900, endYear: 1945 });
     expect(result).toHaveLength(2);
   });
 
   it('handles events with no countries field', () => {
-    const events = [{ id: 1, year: 100, region: 'Europe' }];
+    const events = [{ id: 1, year: 100, region: 'Eastern Europe' }];
     const result = filterEvents(events, { country: 'CZ' });
     expect(result).toHaveLength(0);
   });
@@ -89,9 +95,15 @@ describe('filterEvents', () => {
 });
 
 describe('getUniqueRegionsAndCountries', () => {
-  it('extracts unique sorted regions', () => {
+  it('extracts unique sorted regions, splitting comma-separated values', () => {
     const { regions } = getUniqueRegionsAndCountries(sampleEvents);
-    expect(regions).toEqual(['Africa', 'Asia', 'Europe']);
+    expect(regions).toEqual([
+      'Eastern Asia',
+      'Eastern Europe',
+      'Northern Africa',
+      'Southern Europe',
+      'Western Europe',
+    ]);
   });
 
   it('extracts unique sorted countries', () => {
@@ -108,16 +120,16 @@ describe('getUniqueRegionsAndCountries', () => {
   it('skips events with no region', () => {
     const events = [
       { id: 1, region: null, countries: 'CZ' },
-      { id: 2, region: 'Europe', countries: 'FR' },
+      { id: 2, region: 'Western Europe', countries: 'FR' },
     ];
     const { regions } = getUniqueRegionsAndCountries(events);
-    expect(regions).toEqual(['Europe']);
+    expect(regions).toEqual(['Western Europe']);
   });
 
   it('skips events with no countries', () => {
     const events = [
-      { id: 1, region: 'Europe', countries: null },
-      { id: 2, region: 'Asia', countries: 'JP' },
+      { id: 1, region: 'Western Europe', countries: null },
+      { id: 2, region: 'Eastern Asia', countries: 'JP' },
     ];
     const { countries } = getUniqueRegionsAndCountries(events);
     expect(countries).toEqual(['JP']);

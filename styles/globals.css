@@ -662,6 +662,27 @@ button:active { transform: scale(0.98); }
   transition: color 0.2s;
 }
 
+/* ─── Pool Flags (filter preview) ─── */
+.pool-flags {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+}
+.pool-flags-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 0.4rem;
+}
+.pool-flags .country-flags {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 /* ─── Race Track (Duel Bar) ─── */
 .race-track {
   background: rgba(0,0,0,0.3);

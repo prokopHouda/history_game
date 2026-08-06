@@ -317,13 +317,13 @@ pages/
 │   ├── finish.js         # force finish + build full standings
 │   └── translate.js      # DeepL proxy + Supabase cache
 components/
-├── SettingsPanel.js      # SP: filter form (year/region/country/lang + pool counter)
+├── SettingsPanel.js      # SP: filter form (year/region/country/lang + pool counter + country flags preview)
 ├── GameCard.js           # SP: event card (flags, name, desc, meta, click/keyboard, states)
-├── CountryFlags.js       # Shared: flag emoji row from `countries` ISO codes (max 5 + "+N countries" hover tooltip)
+├── CountryFlags.js       # Shared: flag row from `countries` ISO codes via flagcdn.com (max 5 + "+N countries" hover tooltip); used on cards, result overlay, and filter previews
 ├── StreakBar.js          # SP: progress bar + milestone text
 ├── Hud.js                # SP: score + streak badges
 ├── LangNav.js            # Shared: EN/CS/IT language buttons
-├── Lobby.js              # MP: create/join room form (filters + rounds + room code)
+├── Lobby.js              # MP: create/join room form (filters + rounds + room code + country flags preview)
 ├── WaitingRoom.js        # MP: player list, profile editor, host start button
 ├── GameScreen.js         # MP: cards + leaderboard + round info + status
 ├── MpGameCard.js         # MP: card with flags + check mark + loading spinner
@@ -337,8 +337,8 @@ components/
 lib/
 ├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, MIN_GAP_YEARS=10)
 ├── eventTime.js          # Shared getEventYear() / getEventTime() — single source of truth for event dating
-├── i18n.js               # Shared base UI text (12 keys × 3 langs) + makeT() accessor factory
-├── filters.js            # Shared filterEvents() + getUniqueRegionsAndCountries()
+├── i18n.js               # Shared base UI text (13 keys × 3 langs) + makeT() accessor factory
+├── filters.js            # Shared filterEvents() + getUniqueRegionsAndCountries() + getPoolCountriesString()
 ├── translate.js          # Shared ensureTranslated() / getText() — fetch + cache translations
 ├── onCardKey.js           # Shared keyboard handler factory (Enter/Space → click)
 ├── milestones.js         # MILESTONES, getMilestone(), getNextMilestone()

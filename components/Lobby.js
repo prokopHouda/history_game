@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { filterEvents, getUniqueRegionsAndCountries } from '../lib/filters.js';
+import { filterEvents, getUniqueRegionsAndCountries, getPoolCountriesString } from '../lib/filters.js';
 import RegionSelect from './RegionSelect.js';
+import CountryFlags from './CountryFlags.js';
 
 export default function Lobby({ allEvents, lang, t, tf, MIN_EVENTS, onCreate, onJoin, creating, error }) {
   const [startYear, setStartYear] = useState('');
@@ -24,6 +25,13 @@ export default function Lobby({ allEvents, lang, t, tf, MIN_EVENTS, onCreate, on
     const c = filterEvents(allEvents, { startYear: sy, endYear: ey, region, country }).length;
     return { count: c, valid: c >= MIN_EVENTS };
   }, [allEvents, startYear, endYear, region, country, MIN_EVENTS]);
+
+  const poolCountries = useMemo(() => {
+    const sy = parseInt(startYear, 10) || null;
+    const ey = parseInt(endYear, 10) || null;
+    if (sy !== null && ey !== null && sy > ey) return '';
+    return getPoolCountriesString(filterEvents(allEvents, { startYear: sy, endYear: ey, region, country }));
+  }, [allEvents, startYear, endYear, region, country]);
 
   function handleCreate() {
     const r = parseInt(rounds, 10) || 10;
@@ -111,6 +119,13 @@ export default function Lobby({ allEvents, lang, t, tf, MIN_EVENTS, onCreate, on
           ? `${count} events available ✅`
           : tf('needEvents', { min: MIN_EVENTS, count })}
       </div>
+
+      {poolCountries && (
+        <div className="pool-flags">
+          <div className="pool-flags-label">{t('poolCountries')}</div>
+          <CountryFlags countries={poolCountries} lang={lang} t={t} />
+        </div>
+      )}
 
       <button className="btn-primary" id="btn-create" disabled={creating} onClick={handleCreate}>
         {creating ? t('creating') : t('createRoom')}

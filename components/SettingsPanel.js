@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { filterEvents, getUniqueRegionsAndCountries } from '../lib/filters.js';
+import { filterEvents, getUniqueRegionsAndCountries, getPoolCountriesString } from '../lib/filters.js';
 import RegionSelect from './RegionSelect.js';
+import CountryFlags from './CountryFlags.js';
 
 export default function SettingsPanel({ allEvents, lang, t, tf, MIN_EVENTS, onStart }) {
   const [startYear, setStartYear] = useState('');
@@ -22,6 +23,13 @@ export default function SettingsPanel({ allEvents, lang, t, tf, MIN_EVENTS, onSt
     const c = filterEvents(allEvents, { startYear: sy, endYear: ey, region, country }).length;
     return { count: c, valid: c >= MIN_EVENTS };
   }, [allEvents, startYear, endYear, region, country, MIN_EVENTS]);
+
+  const poolCountries = useMemo(() => {
+    const sy = parseInt(startYear, 10) || null;
+    const ey = parseInt(endYear, 10) || null;
+    if (sy !== null && ey !== null && sy > ey) return '';
+    return getPoolCountriesString(filterEvents(allEvents, { startYear: sy, endYear: ey, region, country }));
+  }, [allEvents, startYear, endYear, region, country]);
 
   function updateStartYear(v) { setStartYear(v); setError(''); }
   function updateEndYear(v) { setEndYear(v); setError(''); }
@@ -113,6 +121,13 @@ export default function SettingsPanel({ allEvents, lang, t, tf, MIN_EVENTS, onSt
           ? `${count} ${t('eventsAvailable')} ✅`
           : `${t('needMore')} ${MIN_EVENTS} ${t('toPlay')} (${count}) ❌`}
       </div>
+
+      {poolCountries && (
+        <div className="pool-flags">
+          <div className="pool-flags-label">{t('poolCountries')}</div>
+          <CountryFlags countries={poolCountries} lang={lang} t={t} />
+        </div>
+      )}
 
       <button
         className="btn-primary"

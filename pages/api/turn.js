@@ -170,21 +170,22 @@ export default async function handler(req, res) {
     }
   }
 
-  const updateData = {
-    scores,
-    current_pair: nextPair,
-    current_round: round,
-    state,
-    winner,
-    last_result: lastResult,
-    next_round_at: nextRoundAt,
-    round_started_at: roundStartedAt,
-    ...(shownPairsToSave ? { shown_pairs: shownPairsToSave } : {}),
-  };
+  const updateData = { answered };
   if (allAnswered) {
+    // Round is complete — advance to the next pair and publish results.
+    // When allAnswered is false we only write `answered` so we never
+    // clobber last_result / current_pair with a stale update that lost
+    // a race against the other player's request.
+    updateData.scores = scores;
+    updateData.current_pair = nextPair;
+    updateData.current_round = round;
+    updateData.state = state;
+    updateData.winner = winner;
+    updateData.last_result = lastResult;
+    updateData.next_round_at = nextRoundAt;
+    updateData.round_started_at = roundStartedAt;
+    if (shownPairsToSave) updateData.shown_pairs = shownPairsToSave;
     updateData.answered = {};
-  } else {
-    updateData.answered = answered;
   }
 
   const { error: updErr } = await supabase

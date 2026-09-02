@@ -403,11 +403,12 @@ export default function Multiplayer() {
     })();
   }, [lang, room, ensureTranslated]);
 
-  // Result overlay auto-hide — reads roomRef.current to avoid
-  // resetting the timeout on every heartbeat-driven room update
+  // Result overlay auto-hide — reads roundResult (the snapshot captured
+  // when the overlay was triggered) so a racing realtime update that
+  // nulls last_result can't prevent the timeout from being scheduled.
   useEffect(() => {
     if (!showResultOverlay) return;
-    const r = roomRef.current;
+    const r = roundResult;
     if (!r) return;
     const lr = r.last_result;
     if (!lr) return;
@@ -415,7 +416,11 @@ export default function Multiplayer() {
     const delay = funFact ? 10000 : 3500;
     const nextRoundAt = r.next_round_at ? new Date(r.next_round_at) : null;
     const now = new Date();
-    const actualDelay = nextRoundAt ? Math.max(3000, nextRoundAt.getTime() - now.getTime()) : delay;
+    // Cap actualDelay so a far-future next_round_at (clock skew or bad
+    // data) can't stall the overlay indefinitely.
+    const actualDelay = nextRoundAt
+      ? Math.min(15000, Math.max(3000, nextRoundAt.getTime() - now.getTime()))
+      : delay;
 
     resultHideTimeoutRef.current = setTimeout(() => {
       setShowResultOverlay(false);
@@ -432,7 +437,7 @@ export default function Multiplayer() {
         resultHideTimeoutRef.current = null;
       }
     };
-  }, [showResultOverlay, lang]);
+  }, [showResultOverlay, lang, roundResult]);
 
   // Cleanup on unmount
   useEffect(() => {

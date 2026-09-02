@@ -75,7 +75,7 @@ sequenceDiagram
     Turn->>DB: UPDATE scores+=points, last_result={...}, current_pair=new, answered={}
     Turn-->>Guest2: {ok, allAnswered}
 
-    Note over Host, Guest2: Result Phase (3.5s)
+    Note over Host, Guest2: Result Phase (7s)
     DB->>RT: broadcast UPDATE
     RT-->>Host: last_result + new current_pair
     RT-->>Guest1: last_result + new current_pair
@@ -83,7 +83,7 @@ sequenceDiagram
     Host->>Host: show overlay + leaderboard
     Guest1->>Guest1: show overlay + leaderboard
     Guest2->>Guest2: show overlay + leaderboard
-    Note over Host, Guest2: 3.5s timer (10s if fun fact)
+    Note over Host, Guest2: 7s timer (15s if fun fact)
     Host->>Host: hide overlay, next round
     Guest1->>Guest1: hide overlay, next round
     Guest2->>Guest2: hide overlay, next round

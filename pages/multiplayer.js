@@ -413,13 +413,13 @@ export default function Multiplayer() {
     const lr = r.last_result;
     if (!lr) return;
     const funFact = lr.fun_fact || getTextLib(lr.earlier, translationsRef.current, lang).fun_fact || '';
-    const delay = funFact ? 10000 : 3500;
+    const delay = funFact ? 15000 : 7000;
     const nextRoundAt = r.next_round_at ? new Date(r.next_round_at) : null;
     const now = new Date();
     // Cap actualDelay so a far-future next_round_at (clock skew or bad
     // data) can't stall the overlay indefinitely.
     const actualDelay = nextRoundAt
-      ? Math.min(15000, Math.max(3000, nextRoundAt.getTime() - now.getTime()))
+      ? Math.min(20000, Math.max(3000, nextRoundAt.getTime() - now.getTime()))
       : delay;
 
     resultHideTimeoutRef.current = setTimeout(() => {

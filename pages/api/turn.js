@@ -159,7 +159,7 @@ export default async function handler(req, res) {
       fun_fact: funFact,
     };
 
-    const resultDisplayMs = funFact ? 10000 : 3500;
+    const resultDisplayMs = funFact ? 15000 : 7000;
     nextRoundAt = new Date(Date.now() + resultDisplayMs).toISOString();
     roundStartedAt = new Date(Date.now() + resultDisplayMs).toISOString();
 

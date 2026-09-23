@@ -13,9 +13,12 @@ export default async function handler(req, res) {
   }
 
   const start = Date.now();
-  const { count, error } = await supabase
+  const { data, error } = await supabase
     .from('events')
-    .select('*', { count: 'exact', head: true });
+    .select('id, short_name')
+    .order('id', { ascending: false })
+    .limit(1)
+    .range(0, 0);
 
   if (error) {
     return res.status(500).json({ error: error.message });
@@ -23,7 +26,7 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     ok: true,
-    events: count,
+    lastEvent: data?.[0]?.short_name || null,
     latencyMs: Date.now() - start,
     timestamp: new Date().toISOString(),
   });

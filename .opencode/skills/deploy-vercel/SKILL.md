@@ -21,26 +21,27 @@ GitHub is the deployment source of truth: pushes to the `main` branch auto-deplo
 Git is installed via GitHub Desktop. Add this directory to `PATH` before every git command:
 
 ```powershell
-$env:PATH += ';C:\Users\proko\AppData\Local\GitHubDesktop\app-3.5.8\resources\app\git\cmd'
+$env:PATH += ';C:\Users\proko\AppData\Local\GitHubDesktop\app-3.6.4\resources\app\git\cmd'
 ```
+
+> **Note:** The GitHub Desktop version directory (`app-3.6.4`) changes with updates. If the path fails, list subdirectories of `C:\Users\proko\AppData\Local\GitHubDesktop` and use the latest `app-*\resources\app\git\cmd`.
 
 ### 2. Stage all changes
 
 ```powershell
-cd C:\Users\proko\history-game
-git add -A
+git -C "C:\Users\proko\Documents\GitHub\history_game" add -A
 ```
 
 ### 3. Commit with a descriptive message
 
 ```powershell
-git commit -m "feat/fix/docs: concise summary of what changed"
+git -C "C:\Users\proko\Documents\GitHub\history_game" commit -m "feat/fix/docs: concise summary of what changed"
 ```
 
 ### 4. Push to main
 
 ```powershell
-git push origin main
+git -C "C:\Users\proko\Documents\GitHub\history_game" push origin main
 ```
 
 ### 5. Verify on GitHub
@@ -60,9 +61,9 @@ No manual Vercel commands are needed.
 
 | Item | Value |
 |------|-------|
-| Local project root | `C:\Users\proko\history-game` |
+| Local project root | `C:\Users\proko\Documents\GitHub\history_game` |
 | Git remote | `https://github.com/prokopHouda/history_game.git` |
 | Branch | `main` |
-| Git executable | `C:\Users\proko\AppData\Local\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe` |
+| Git executable | `C:\Users\proko\AppData\Local\GitHubDesktop\app-3.6.4\resources\app\git\cmd\git.exe` |
 | Vercel project | `prokop-s-projects/history-game` |
 | Production alias | `https://history-game-ten.vercel.app` |

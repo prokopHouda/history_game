@@ -1,25 +1,25 @@
-# AGENTS.md — History Quiz Game
+# AGENTS.md — Higher or Lower Games
 
 ## Project overview
 - **Stack**: Next.js 16 (Pages Router), React 19, Supabase JS client, DeepL translation API
-- **Single-page game**: Single-player UI lives in `pages/index.js` (React state + components). Multiplayer (`pages/multiplayer.js`) also uses React state + components with realtime subscriptions.
+- **Multi-game quiz platform**: pick between two things — earlier (history) or higher (mountains) — single-player or real-time multiplayer
+- **Game registry**: `lib/games.js` describes every game (mechanics, tables, filters); pages/components/APIs are shared and game-agnostic
 - **Deployed on Vercel** with connected GitHub repo `prokopHouda/history_game`
-- **Local source folder**: `C:\Users\proko\history-game` (NOT `Documents\history_game`)
+- **Local source folder**: `C:\Users\proko\Documents\GitHub\history_game`
 
 ## Entry points & architecture
-- **App entry (single player)**: `pages/index.js` — quiz game UI, filters, scoring, streaks, i18n, translations
-- **App entry (multiplayer)**: `pages/multiplayer.js` — lobby, game rooms, turn-based play via Supabase Realtime
-- **API entry**: `pages/api/translate.js` — fetches cached translations from Supabase; falls back to DeepL; stores new translations back to `event_translations`
-- **New API endpoints**: `pages/api/room.js` (create/join), `pages/api/turn.js` (validate turn + generate next pair)
-- **App shell**: standard `_app.js`, `_document.js`
-- **Styling**: CSS Modules (`Home.module.css`) + `globals.css` with glassmorphism / gradient theme (Inter font via Google Fonts)
+- **Homescreen**: `pages/index.js` — two-step wizard (single/multiplayer → game)
+- **Game routes (SSG)**: `pages/play/[game]/index.js` + `pages/play/[game]/multiplayer.js` — thin wrappers over `components/SinglePlayerGame.js` / `components/MultiplayerGame.js` (both take `game` prop)
+- **Old URL** `/multiplayer` redirects (308) to `/play/history/multiplayer` via `next.config.mjs`
+- **API**: `pages/api/room.js` (create/join/lifecycle), `pages/api/turn.js` (validate turn + next pair), `pages/api/finish.js`, `pages/api/translate.js` (DeepL proxy + cache) — all game-aware via `rooms.game` / `game` param
+- **Styling**: `styles/globals.css` glassmorphism / gradient theme (Inter font)
 
 ### Multiplayer architecture (Supabase Realtime)
-- Players create/join rooms via `POST /api/room` (3-letter room code)
+- Players create/join rooms via `POST /api/room` (3-letter room code, `game` param)
 - Room state stored in `rooms` table with realtime enabled via `postgres_changes`
 - Client subscribes to `supabase.channel("room:{code}")` for instant sync
-- Both players answer individually; when both answered, system auto-generates next pair via `pickPair` (proximity-weighted + deduplication)
-- Win condition: streak of 3 (simplified multiplayer version)
+- Both players answer individually; when all answered, system auto-generates next pair via `pickPair` (proximity-weighted + deduplication, game-aware gaps)
+- Win condition: highest score after `total_rounds` rounds (5–50)
 - Realtime WebSocket used instead of polling; free tier supports 200 concurrent connections
 
 ## Data model (Supabase)
@@ -32,11 +32,25 @@
   - Unique constraint on `(event_id, lang)` — no duplicate translations
   - FK to `events(id)` with `ON DELETE CASCADE` — orphans auto-cleaned
   - `updated_at` auto-updates on row change (trigger) — available for future cache TTL logic
-- **`rooms` table** (multiplayer): `id, code, host, player_b, state, events, current_pair, scores, streaks, current_round, answered, winner, shown_pairs, heartbeats, created_at/updated_at`
-  - Migration: `database/00_create_rooms.sql` — must be run manually in Supabase SQL Editor
+- **`mountains` table**: `id, short_name, elevation (int), description, countries, range, fun_fact` — mirrors `events` (migration `database/15_create_mountains.sql`; RLS: public read on `mountains`, translations service-only)
+- **`mountain_translations` table**: `mountain_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
+- **`rooms` table** (multiplayer): `id, code, game, host, state, events (pool JSONB), current_pair, scores, streaks, current_round, answered, winner, shown_pairs, heartbeats, created_at/updated_at`
+  - `game`: `'history'` (default) or `'mountains'` — set at create, read by turn/translate logic
+  - Migrations: `database/00_create_rooms.sql`, `database/16_add_rooms_game.sql` — run manually in Supabase SQL Editor
   - `shown_pairs`: JSONB array of canonical pair keys (`"a-b"`) preventing repeat questions
   - `heartbeats`: JSONB tracking last-seen timestamps per player for disconnect detection
   - Realtime enabled via: `alter publication supabase_realtime add table rooms;`
+
+## Game mechanics config (`lib/games.js`)
+| | history | mountains |
+|---|---|---|
+| Question | Which happened earlier? | Which is higher? |
+| Winner | lower `getComparable` | higher `getComparable` |
+| minGap (never paired) | 2 years | 50 m |
+| easyGap (+1 / +2 below) | 100 years | 500 m |
+| gapScale (weight decay) | 50 | 500 |
+| Filter keys | `startYear`/`endYear`, `region`, `country` | `minElevation`/`maxElevation`, `range`, `country` |
+| UI dicts | `SP_UI.history` / `MP_UI.history` in `lib/gameUi.js` | `SP_UI.mountains` / `MP_UI.mountains` |
 
 ## Environment variables
 | Variable | Scope | Notes |
@@ -49,10 +63,10 @@
 **Critical**: `.env.local` is gitignored. The repo's `.env.local` only contains public keys. The two secret keys must live in Vercel dashboard → Project Settings → Environment Variables. The public keys are also there for production.
 
 ## Translation flow
-1. Game UI requests `/api/translate?ids=...&lang=...`
-2. API checks `event_translations` cache first
+1. Game UI requests `/api/translate?ids=...&lang=...&game=...`
+2. API checks the game's translations table cache first (`event_translations` / `mountain_translations`)
 3. Missing texts are sent to DeepL (`api-free.deepl.com`), translated from EN → target
-4. New translations are **inserted back** into `event_translations`
+4. New translations are **upserted back** into the game's translations table
 5. Graceful fallback to English if DeepL fails or key is missing
 
 ## Running locally
@@ -65,14 +79,22 @@ npm run build    # next build (must have env vars set)
 ## Build / deploy
 - Dev server: `npm run dev` (needs `.env.local` with public keys)
 - Production: push to `main` branch on GitHub → Vercel auto-deploys
-- Manual Vercel deploy: `vercel --prod`
+- Never deploy via Vercel CLI — always through GitHub (see `.opencode/skills/deployment-history-game`)
 
 ## i18n
 Built-in languages: `en`, `cs`, `it`. Language stored in `localStorage('gameLang')`, defaults to `en`.
-Static UI strings are inline in `pages/index.js`. Event data is translated via `/api/translate`.
+Per-game UI dictionaries live in `lib/gameUi.js` (`SP_UI`, `MP_UI` — key parity across languages enforced by tests). Item data is translated via `/api/translate`.
+
+## Adding a new game
+1. Add an entry to `GAMES` in `lib/games.js` (mechanics + data tables + filter keys)
+2. Add `SP_UI.<key>` and `MP_UI.<key>` dictionaries in `lib/gameUi.js` (all langs, same keys)
+3. Create the data + translations tables in Supabase (mirror `database/15_create_mountains.sql`)
+4. Add the game to `getStaticPaths` in both `pages/play/[game]/` routes and to `GAMES_META` in `pages/index.js`
+5. Seed data via a batch file + `scripts/seed-mountains.js`-style script (or extend it)
 
 ## Important conventions
 - **Never** commit secrets. `.env*` is gitignored. Only public keys in `.env.local`.
-- Single-player (`pages/index.js`) and multiplayer (`pages/multiplayer.js`) both use React state + components. Multiplayer uses `useRef` for flow-control variables and `useEffect` for realtime subscriptions, heartbeat intervals, and turn timers.
-- The `events` and `event_translations` tables are managed in Supabase dashboard; no migrations or seed scripts exist in the repo.
+- Single-player and multiplayer engines live in `components/SinglePlayerGame.js` / `components/MultiplayerGame.js` and are game-agnostic. Multiplayer uses `useRef` for flow-control variables and `useEffect` for realtime subscriptions, heartbeat intervals, and turn timers.
+- The `events` and `event_translations` tables are managed in Supabase dashboard; seed scripts for new data live in `scripts/` (events-data / mountains-data batch files).
+- Wire keys `earlier`/`later` in `/api/turn` responses mean "correct answer"/"wrong answer" regardless of game direction — kept for compatibility.
 

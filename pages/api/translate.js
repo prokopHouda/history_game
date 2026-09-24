@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getGame } from '../../lib/games.js';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -71,24 +72,26 @@ async function translatePlain(rows, lang) {
 }
 
 export default async function handler(req, res) {
-  const { ids, lang } = req.query;
+  const { ids, lang, game: gameKey } = req.query;
   if (!ids || !lang) return res.status(400).json({ error: 'Missing ids or lang' });
   if (lang === 'en') return res.status(200).json({});
 
+  const game = getGame(gameKey);
+  const { translationsTable, translationFkColumn: fkColumn, table } = game.data;
   const idArr = ids.split(',').map(Number);
 
   // 1. Check cache
   const { data: cached } = await supabaseAdmin
-    .from('event_translations')
-    .select('event_id, short_name, description, fun_fact')
-    .in('event_id', idArr)
+    .from(translationsTable)
+    .select(`${fkColumn}, short_name, description, fun_fact`)
+    .in(fkColumn, idArr)
     .eq('lang', lang);
 
   const result = {};
   const missingRows = [];
 
   idArr.forEach((id) => {
-    const hit = cached?.find((c) => c.event_id === id);
+    const hit = cached?.find((c) => c[fkColumn] === id);
     // Treat null short_name as a cache miss so bad/stale translations get overwritten
     if (hit && hit.short_name != null) {
       result[id] = { short_name: hit.short_name, description: hit.description, fun_fact: hit.fun_fact };
@@ -100,7 +103,7 @@ export default async function handler(req, res) {
   // 2. Translate anything missing via DeepL
   if (missingRows.length > 0) {
     const { data: rows } = await supabaseAdmin
-      .from('events')
+      .from(table)
       .select('id, short_name, description, fun_fact')
       .in('id', missingRows);
 
@@ -119,11 +122,11 @@ export default async function handler(req, res) {
       const sn = shortNames[i];
       const { description, fun_fact } = extras[i];
       result[r.id] = { short_name: sn, description, fun_fact };
-      return { event_id: r.id, lang, short_name: sn, description, fun_fact };
+      return { [fkColumn]: r.id, lang, short_name: sn, description, fun_fact };
     });
 
-    await supabaseAdmin.from('event_translations')
-      .upsert(inserts, { onConflict: 'event_id,lang' });
+    await supabaseAdmin.from(translationsTable)
+      .upsert(inserts, { onConflict: `${fkColumn},lang` });
   }
 
   res.status(200).json(result);

@@ -1,27 +1,37 @@
-# History Game Documentation
+# Higher or Lower Games — Documentation
 
-Welcome to the **History Game** documentation! This folder contains all technical and architectural documentation for the project.
+Welcome to the **Higher or Lower Games** documentation! This folder contains all technical and architectural documentation for the project.
 
 ## Table of Contents
 
 | Document | Description |
 |----------|-------------|
-| [architecture.md](./architecture.md) | System architecture, data flows, database schema |
+| [architecture.md](./architecture.md) | System architecture, data flows, database schema, game registry |
 | [api.md](./api.md) | API endpoints, request/response formats |
-| [setup.md](./setup.md) | Local development setup and environment variables |
 
 ## Project Overview
 
-**History Game** is a multiplayer history trivia game built with [Next.js](https://nextjs.org). Players compete in real-time to identify which of two historical events occurred earlier.
+**Higher or Lower Games** is a multi-game quiz platform built with [Next.js](https://nextjs.org). Players pick between two things — which one is "lower" or "higher" — across different games, in single-player or real-time multiplayer.
+
+### Games
+
+| Game | Question | Dataset |
+|------|----------|---------|
+| **History** | Which event happened earlier? | ~200 historical events |
+| **Mountains** | Which mountain is higher? | ~206 world peaks |
+
+New games are added by creating one entry in the game registry (`lib/games.js`) plus one data table — all pages, APIs and components are shared.
 
 ### Features
 
-- **Single-player mode** — practice against the clock
-## Multiplayer mode — real-time matches with lobby, room codes, and live scoring (2-10 players)
+- **Homescreen** — pick single/multiplayer, then pick a game
+- **Single-player mode** — solo streaks with ranks and milestones (win at streak 50)
+- **Multiplayer mode** — real-time matches with lobby, room codes, and live scoring (2-10 players)
 - **Live updates** — powered by Supabase Realtime
 - **Language support** — English, Czech, Italian (extensible via DeepL)
 - **Fun facts** — learn something new after each round
 - **Disconnect detection** — server-side heartbeats detect player dropouts
+- **Per-game filters** — year/region/country for history, elevation/range/country for mountains
 
 ## Quick Start
 
@@ -34,5 +44,3 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.
-
-See [setup.md](./setup.md) for full configuration details.

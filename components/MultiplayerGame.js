@@ -1,182 +1,24 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
-import { baseUiText, makeT } from '../lib/i18n.js';
+import { getGame } from '../lib/games.js';
+import { makeT } from '../lib/i18n.js';
 import { ensureTranslated as ensureTranslatedLib, getText as getTextLib } from '../lib/translate.js';
-import Lobby from '../components/Lobby.js';
-import WaitingRoom from '../components/WaitingRoom.js';
-import GameScreen from '../components/GameScreen.js';
-import ResultOverlay from '../components/ResultOverlay.js';
-import FinalStandings from '../components/FinalStandings.js';
-import DisconnectOverlay from '../components/DisconnectOverlay.js';
+import { MP_UI } from '../lib/gameUi.js';
+import Lobby from './Lobby.js';
+import WaitingRoom from './WaitingRoom.js';
+import GameScreen from './GameScreen.js';
+import ResultOverlay from './ResultOverlay.js';
+import FinalStandings from './FinalStandings.js';
+import DisconnectOverlay from './DisconnectOverlay.js';
 
 const MIN_EVENTS = 25;
 const TURN_TIMEOUT_MS = 45000;
 const TURN_TIMEOUT_GRACE_MS = 500;
 
-const MP_UI = {
-  en: {
-    ...baseUiText.en,
-    title: 'Multiplayer',
-    subtitle: 'Compete with up to 9 friends in real time',
-    createGame: 'Create Game',
-    joinGame: 'Join Game',
-    rounds: 'Number of Rounds (5–50)',
-    createRoom: 'Create Room',
-    joinRoom: 'Join Room',
-    roomCode: 'Room Code',
-    loading: 'Loading...',
-    waiting: 'Waiting Room',
-    waitingOpp: 'Waiting for other players...',
-    waitingHost: 'Waiting for host to start the game...',
-    yourTurn: 'Your turn! Pick the earlier event.',
-    loadingEvents: 'Loading events...',
-    you: 'You',
-    opponent: 'Opponent',
-    leaderboard: 'Leaderboard',
-    round: 'Round',
-    correct: 'Correct!',
-    wrong: 'Wrong!',
-    timedOut: 'No answer',
-    wasEarlier: 'was earlier',
-    didYouKnow: 'Did you know?',
-    roomClosedTitle: 'Room Closed',
-    roomClosedMsg: 'The host has left. This room is no longer available.',
-    roomClosedSub: 'Create a new room or join another one.',
-    backToLobby: 'Back to Lobby',
-    playersConnected: '{count} / {max} players connected',
-    startGame: 'Start Game',
-    nickname: 'Nickname',
-    pickColor: 'Color',
-    save: 'Save',
-    finalStandings: 'Final Standings',
-    rank: 'Rank',
-    returnToLobby: 'Return to lobby',
-    restartGame: 'Restart game',
-    minPlayers: 'Need at least 2 players to start',
-    roomFull: 'Room is full',
-    oppLabel: 'Opponent:',
-    nextRound: 'Next round starting soon...',
-    sending: 'Sending...',
-    networkError: 'Network error. Please try again.',
-    failedCreate: 'Failed to create room',
-    failedJoin: 'Failed to join room',
-    roundsRange: 'Rounds must be 5–50',
-    needEvents: 'Need at least {min} events to play ({count})',
-    creating: 'Creating...',
-    placeholderStartYear: 'e.g. 1500',
-    placeholderEndYear: 'e.g. 2000',
-    placeholderRoomCode: 'abc',
-  },
-  cs: {
-    ...baseUiText.cs,
-    title: 'Multiplayer',
-    subtitle: 'Soutěž s až 9 přáteli v reálném čase',
-    createGame: 'Vytvořit hru',
-    joinGame: 'Připojit se ke hře',
-    rounds: 'Počet kol (5–50)',
-    createRoom: 'Vytvořit místnost',
-    joinRoom: 'Připojit se',
-    roomCode: 'Kód místnosti',
-    loading: 'Načítání...',
-    waiting: 'Čekací místnost',
-    waitingOpp: 'Čeká se na ostatní hráče...',
-    waitingHost: 'Čeká se na hostitele, aby spustil hru...',
-    yourTurn: 'Jsi na tahu! Vyber dřívější událost.',
-    loadingEvents: 'Načítání událostí...',
-    you: 'Ty',
-    opponent: 'Soupeř',
-    leaderboard: 'Žebříček',
-    round: 'Kolo',
-    correct: 'Správně!',
-    wrong: 'Špatně!',
-    timedOut: 'Bez odpovědi',
-    wasEarlier: 'bylo dřív',
-    didYouKnow: 'Věděl jsi?',
-    roomClosedTitle: 'Místnost uzavřena',
-    roomClosedMsg: 'Hostitel odešel. Tato místnost již není dostupná.',
-    roomClosedSub: 'Vytvoř novou místnost nebo se připoj k jiné.',
-    backToLobby: 'Zpět do lobby',
-    playersConnected: '{count} / {max} hráčů připojeno',
-    startGame: 'Spustit hru',
-    nickname: 'Přezdívka',
-    pickColor: 'Barva',
-    save: 'Uložit',
-    finalStandings: 'Konečné pořadí',
-    rank: 'Pozice',
-    returnToLobby: 'Zpět do lobby',
-    restartGame: 'Restart hry',
-    minPlayers: 'Ke startu jsou potřeba alespoň 2 hráči',
-    roomFull: 'Místnost je plná',
-    oppLabel: 'Soupeř:',
-    nextRound: 'Další kolo začíná za chvíli...',
-    sending: 'Odesílání...',
-    networkError: 'Chyba sítě. Zkus to znovu.',
-    failedCreate: 'Nepodařilo se vytvořit místnost',
-    failedJoin: 'Nepodařilo se připojit do místnosti',
-    roundsRange: 'Kol musí být 5–50',
-    needEvents: 'Potřebuješ alespoň {min} událostí ke hře ({count})',
-    creating: 'Vytváření...',
-    placeholderStartYear: 'např. 1500',
-    placeholderEndYear: 'např. 2000',
-    placeholderRoomCode: 'abc',
-  },
-  it: {
-    ...baseUiText.it,
-    title: 'Multiplayer',
-    subtitle: 'Gareggia con fino a 9 amici in tempo reale',
-    createGame: 'Crea partita',
-    joinGame: 'Unisciti alla partita',
-    rounds: 'Numero di round (5–50)',
-    createRoom: 'Crea stanza',
-    joinRoom: 'Unisciti',
-    roomCode: 'Codice stanza',
-    loading: 'Caricamento...',
-    waiting: 'Sala d\'attesa',
-    waitingOpp: 'In attesa degli altri giocatori...',
-    waitingHost: 'In attesa che l\'host avvii la partita...',
-    yourTurn: 'Tocca a te! Scegli l\'evento più antico.',
-    loadingEvents: 'Caricamento eventi...',
-    you: 'Tu',
-    opponent: 'Avversario',
-    leaderboard: 'Classifica',
-    round: 'Round',
-    correct: 'Corretto!',
-    wrong: 'Sbagliato!',
-    timedOut: 'Nessuna risposta',
-    wasEarlier: 'era prima',
-    didYouKnow: 'Lo sapevi?',
-    roomClosedTitle: 'Stanza chiusa',
-    roomClosedMsg: 'L\'host è uscito. Questa stanza non è più disponibile.',
-    roomClosedSub: 'Crea una nuova stanza o unisciti a un\'altra.',
-    backToLobby: 'Torna alla lobby',
-    playersConnected: '{count} / {max} giocatori connessi',
-    startGame: 'Avvia partita',
-    nickname: 'Nickname',
-    pickColor: 'Colore',
-    save: 'Salva',
-    finalStandings: 'Classifica finale',
-    rank: 'Posizione',
-    returnToLobby: 'Torna alla lobby',
-    restartGame: 'Ricomincia partita',
-    minPlayers: 'Servono almeno 2 giocatori per iniziare',
-    roomFull: 'Stanza piena',
-    oppLabel: 'Avversario:',
-    nextRound: 'Il prossimo round inizierà a breve...',
-    sending: 'Invio in corso...',
-    networkError: 'Errore di rete. Riprova.',
-    failedCreate: 'Impossibile creare la stanza',
-    failedJoin: 'Impossibile unirsi alla stanza',
-    roundsRange: 'I round devono essere 5–50',
-    needEvents: 'Servono almeno {min} eventi per giocare ({count})',
-    creating: 'Creazione in corso...',
-    placeholderStartYear: 'es. 1500',
-    placeholderEndYear: 'es. 2000',
-    placeholderRoomCode: 'abc',
-  },
-};
+export default function MultiplayerGame({ game: gameKey }) {
+  const game = getGame(gameKey);
 
-export default function Multiplayer() {
   const [lang, setLang] = useState(() => (typeof window !== 'undefined' ? sessionStorage.getItem('mp_lang') || 'en' : 'en'));
   const [screen, setScreen] = useState('loading');
   const [allEvents, setAllEvents] = useState([]);
@@ -212,7 +54,7 @@ export default function Multiplayer() {
   const roomRef = useRef(null);
   const resultHideTimeoutRef = useRef(null);
 
-  const { t, tf } = makeT(MP_UI, () => lang);
+  const { t, tf } = makeT(MP_UI[game.key] || MP_UI.history, () => lang);
 
   // Initialize playerId
   if (!playerIdRef.current && typeof window !== 'undefined') {
@@ -234,8 +76,8 @@ export default function Multiplayer() {
 
   // Helper: ensure translated
   const ensureTranslated = useCallback(async (events) => {
-    return ensureTranslatedLib(events, translationsRef.current, lang);
-  }, [lang]);
+    return ensureTranslatedLib(events, translationsRef.current, lang, game.key);
+  }, [lang, game.key]);
 
   // Init: load events
   useEffect(() => {
@@ -247,7 +89,7 @@ export default function Multiplayer() {
     supabaseRef.current = supabase;
 
     (async () => {
-      const { data } = await supabase.from('events').select('id, short_name, date, year, description, countries, region');
+      const { data } = await supabase.from(game.data.table).select(game.data.select);
       if (data) {
         setAllEvents(data);
         setScreen('lobby');
@@ -522,7 +364,7 @@ export default function Multiplayer() {
             lastShownResultRoundRef.current = resultRound;
             (async () => {
               const allEv = [lr.earlier, lr.pair[0], lr.pair[1]].filter(Boolean);
-              await ensureTranslatedLib(allEv, translationsRef.current, lang);
+              await ensureTranslatedLib(allEv, translationsRef.current, lang, game.key);
               setRoundResult(newRoom);
               setShowResultOverlay(true);
             })();
@@ -537,7 +379,7 @@ export default function Multiplayer() {
             lastShownResultRoundRef.current = resultRound;
             (async () => {
               const allEv = [lr.earlier, lr.pair[0], lr.pair[1]].filter(Boolean);
-              await ensureTranslatedLib(allEv, translationsRef.current, lang);
+              await ensureTranslatedLib(allEv, translationsRef.current, lang, game.key);
               setRoundResult(newRoom);
               setShowResultOverlay(true);
             })();
@@ -574,7 +416,7 @@ export default function Multiplayer() {
       const res = await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', playerId: playerIdRef.current, total_rounds: rounds, filters, lang: selectedLang }),
+        body: JSON.stringify({ action: 'create', playerId: playerIdRef.current, total_rounds: rounds, filters, lang: selectedLang, game: game.key }),
       });
       const json = await res.json();
       if (json.room) {
@@ -739,8 +581,16 @@ export default function Multiplayer() {
     resultOverlayData = {
       result: lr,
       earlierText,
-      pairTextA: { short_name: ta.short_name, date: a.date || a.year, countries: a.countries },
-      pairTextB: { short_name: tb.short_name, date: b.date || b.year, countries: b.countries },
+      pairTextA: {
+        short_name: ta.short_name,
+        valueLabel: game.key === 'history' ? (a.date || a.year) : (a.elevation ? `${a.elevation} m` : ''),
+        countries: a.countries,
+      },
+      pairTextB: {
+        short_name: tb.short_name,
+        valueLabel: game.key === 'history' ? (b.date || b.year) : (b.elevation ? `${b.elevation} m` : ''),
+        countries: b.countries,
+      },
       funFactText,
     };
   }
@@ -755,7 +605,7 @@ export default function Multiplayer() {
         className="subtitle"
         style={{ display: 'block', marginBottom: '1rem', background: 'rgba(99,102,241,0.2)', padding: '0.5rem 1rem', borderRadius: '8px', textDecoration: 'none' }}
       >
-        ← Single Player
+        {t('backToHomescreen')}
       </Link>
 
       {screen === 'loading' && (
@@ -768,6 +618,7 @@ export default function Multiplayer() {
           lang={lang}
           t={t}
           tf={tf}
+          game={game}
           MIN_EVENTS={MIN_EVENTS}
           onCreate={createRoom}
           onJoin={joinRoom}
@@ -807,6 +658,7 @@ export default function Multiplayer() {
           onGuess={guess}
           onLangChange={changeLang}
           getText={getText}
+          pickAriaLabel={t('pickAriaLabel')}
         />
       )}
 
@@ -830,7 +682,7 @@ export default function Multiplayer() {
           playerId={playerIdRef.current}
           t={t}
           onRestart={restartGame}
-          onReturnToLobby={() => window.location.href = '/multiplayer'}
+          onReturnToLobby={() => window.location.href = `/play/${game.key}/multiplayer`}
         />
       )}
 

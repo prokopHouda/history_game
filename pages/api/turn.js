@@ -1,25 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { pickPair } from '../../lib/pickPair.js';
-import { getEventYear, getEventTime } from '../../lib/eventTime.js';
+import { getGame, pickWinner, valueGap, pointsForGap } from '../../lib/games.js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-function yearDiff(years) {
-  return Math.abs(years[0] - years[1]);
-}
-
-function calculatePoints(a, b, isCorrect) {
-  const yA = getEventYear(a);
-  const yB = getEventYear(b);
-  const diff = yearDiff([yA, yB]);
-
-  if (isCorrect) {
-    return diff >= 100 ? 1 : 2;
-  }
-  return 0;
+function calculatePoints(game, a, b, isCorrect) {
+  if (!isCorrect) return 0;
+  return pointsForGap(game, valueGap(game, a, b));
 }
 
 const TURN_TIMEOUT_MS = 45000;
@@ -60,9 +50,10 @@ export default async function handler(req, res) {
   const pair = room.current_pair || [];
   if (pair.length < 2) return res.status(400).json({ error: 'No active pair' });
 
+  const game = getGame(room.game);
   const a = pair[0];
   const b = pair[1];
-  const earlierId = getEventTime(a) < getEventTime(b) ? a.id : b.id;
+  const earlierId = pickWinner(game, a, b).id;
 
   const answered = room.answered || {};
   if (answered[playerId] !== undefined) return res.status(409).json({ error: 'Already answered' });
@@ -79,7 +70,7 @@ export default async function handler(req, res) {
   } else {
     const chosen = choice === 'A' ? a : b;
     isCorrect = chosen.id === earlierId;
-    points = calculatePoints(a, b, isCorrect);
+    points = calculatePoints(game, a, b, isCorrect);
     answered[playerId] = { choice, isCorrect, points };
   }
 
@@ -117,13 +108,14 @@ export default async function handler(req, res) {
       scores[pid] = (scores[pid] || 0) + ans.points;
     });
 
-    const earlier = getEventTime(a) < getEventTime(b) ? a : b;
+    const earlier = pickWinner(game, a, b);
+    const later = earlier.id === a.id ? b : a;
 
-    // Fetch fun_fact for the earlier event directly from DB
+    // Fetch fun_fact for the winning event directly from DB
     let funFact = '';
     try {
       const { data: factData } = await supabase
-        .from('events')
+        .from(game.data.table)
         .select('fun_fact')
         .eq('id', earlier.id)
         .single();
@@ -136,7 +128,7 @@ export default async function handler(req, res) {
     const events = room.events || [];
     if (events.length >= 2) {
       const shownPairsSet = new Set(room.shown_pairs || []);
-      nextPair = pickPair(events, shownPairsSet);
+      nextPair = pickPair(events, shownPairsSet, room.game);
       shownPairsToSave = Array.from(shownPairsSet);
     }
 
@@ -198,8 +190,8 @@ export default async function handler(req, res) {
   res.status(200).json({
     isCorrect,
     points,
-    earlier: getEventTime(a) < getEventTime(b) ? a : b,
-    later: getEventTime(a) < getEventTime(b) ? b : a,
+    earlier: pickWinner(game, a, b),
+    later: pickWinner(game, a, b).id === a.id ? b : a,
     scores,
     allAnswered,
     round,

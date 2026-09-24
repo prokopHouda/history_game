@@ -1,6 +1,10 @@
-# History Game - API Reference
+# Higher or Lower Games - API Reference
 
 Base URL: `https://history-game.vercel.app/api` *(update with your actual deployment URL)*
+
+## Game parameter
+
+Most endpoints are **game-aware**. Pass `"game": "history"` or `"game": "mountains"` (defaults to `"history"`), or for `/api/translate` the query param `&game=`. Rooms store their game at creation and all turn/translate logic reads it back from the room row.
 
 ---
 
@@ -10,13 +14,14 @@ Handles room lifecycle: creation, joining, profile updates, starting, restarting
 
 ### `POST /api/room` — Create Room
 
-Create a new multiplayer room. Host is automatically added to the `players` array.
+Create a new multiplayer room. Host is automatically added to the `players` array. The `game` field selects the game's data table, filter keys and pair mechanics.
 
-**Request body:**
+**Request body (history):**
 ```json
 {
   "action": "create",
   "playerId": "abc123",
+  "game": "history",
   "total_rounds": 10,
   "filters": {
     "startYear": 1500,
@@ -29,12 +34,33 @@ Create a new multiplayer room. Host is automatically added to the `players` arra
 }
 ```
 
+**Request body (mountains):**
+```json
+{
+  "action": "create",
+  "playerId": "abc123",
+  "game": "mountains",
+  "total_rounds": 10,
+  "filters": {
+    "minElevation": 2000,
+    "maxElevation": 8849,
+    "range": "Alps",
+    "country": "CH"
+  },
+  "nickname": "Alice",
+  "color": "#ef4444"
+}
+```
+
+Filter keys are game-specific (see `lib/games.js` → `mechanics.filters`); the API ignores keys that don't belong to the room's game.
+
 **Response:**
 ```json
 {
   "room": {
     "id": 1,
     "code": "xyz",
+    "game": "history",
     "state": "lobby",
     "total_rounds": 10,
     "current_round": 1,
@@ -239,11 +265,11 @@ Check whether other players are still alive. If the host is disconnected in lobb
 
 ## `/api/turn`
 
-Handles player answer submission and scoring.
+Handles player answer submission and scoring. Comparison direction and point thresholds come from the room's game: history = earlier wins (+1 at gap ≥ 100 years), mountains = higher wins (+1 at gap ≥ 500 m).
 
 ### `POST /api/turn` — Submit Answer
 
-Submit which event the player thinks occurred earlier.
+Submit which item the player thinks is correct (earlier event / higher mountain).
 
 **Request body:**
 ```json
@@ -282,6 +308,8 @@ Submit which event the player thinks occurred earlier.
 }
 ```
 
+Note: the `earlier`/`later` keys mean "the correct answer" / "the wrong one" — for mountains rooms they carry the higher/lower peak. The key names are kept for wire compatibility.
+
 **Server-side deadline:** If 45 seconds pass since `round_started_at` and not all active players have answered, the server auto-marks missing players as `timedOut` (0 points) and advances the round.
 
 ---
@@ -316,29 +344,31 @@ Forces the game to finish and returns full standings.
 
 ## `/api/translate`
 
-DeepL translation proxy with Supabase caching.
+DeepL translation proxy with Supabase caching. Translates from the game's data table into its translations table.
 
-### `POST /api/translate`
+### `GET /api/translate`
 
-Request translations for a batch of event IDs.
+Request translations for a batch of item IDs.
 
-**Request body:**
-```json
-{
-  "ids": [1, 2, 3],
-  "lang": "cs"
-}
+**Query params:**
+- `ids` — comma-separated item ids (events for `history`, mountains for `mountains`)
+- `lang` — target language (`cs`, `it`; `en` returns empty)
+- `game` — `history` (default) or `mountains`; selects `events`/`event_translations` or `mountains`/`mountain_translations`
+
+**Example:**
+```
+GET /api/translate?ids=1,2,3&lang=cs&game=mountains
 ```
 
 **Response:**
 ```json
 {
-  "translations": [
-    { "event_id": 1, "short_name": "...", "description": "...", "fun_fact": "..." }
-  ],
-  "cached": true
+  "1": { "short_name": "...", "description": "...", "fun_fact": "..." },
+  "2": { "short_name": "...", "description": "...", "fun_fact": "..." }
 }
 ```
+
+Missing translations are fetched from DeepL (descriptions + fun facts; short names get description context) and cached back into the game's translations table with `upsert` on `(fk, lang)`.
 
 ---
 

@@ -851,3 +851,72 @@ button:active { transform: scale(0.98); }
   color: #c7d2fe;
   letter-spacing: 0.05em;
 }
+
+/* Homescreen */
+.home-lang-nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.home-lang-nav .lang-btn {
+  background: transparent;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  max-width: 640px;
+  margin: 2rem auto 0;
+}
+
+.home-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 2rem 1.5rem 1.75rem;
+  cursor: pointer;
+  text-decoration: none;
+  color: #e2e8f0;
+  backdrop-filter: blur(12px);
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.home-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(129, 140, 248, 0.6);
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.home-card-icon {
+  font-size: 2.75rem;
+  line-height: 1;
+  margin-bottom: 0.35rem;
+}
+
+.home-card-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #c084fc, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.home-card-desc {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.home-back {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}

@@ -108,3 +108,60 @@ describe('pickPair', () => {
     expect(gap).toBeGreaterThan(2);
   });
 });
+
+describe('pickPair — mountains game', () => {
+  const peaks = [
+    { id: 1, elevation: 1000 },
+    { id: 2, elevation: 2000 },
+    { id: 3, elevation: 3000 },
+    { id: 4, elevation: 4000 },
+    { id: 5, elevation: 5000 },
+  ];
+
+  it('picks pairs from elevation values', () => {
+    const pair = pickPair(peaks, new Set(), 'mountains');
+    expect(pair).toHaveLength(2);
+    expect(pair[0].id).not.toBe(pair[1].id);
+  });
+
+  it('enforces minimum gap of >50 m', () => {
+    for (let i = 0; i < 50; i++) {
+      const pair = pickPair(peaks, new Set(), 'mountains');
+      const gap = Math.abs(pair[0].elevation - pair[1].elevation);
+      expect(gap).toBeGreaterThan(50);
+    }
+  });
+
+  it('throws when all peaks are within 50 m of each other', () => {
+    const closePeaks = [
+      { id: 1, elevation: 4000 },
+      { id: 2, elevation: 4020 },
+      { id: 3, elevation: 4040 },
+    ];
+    expect(() => pickPair(closePeaks, new Set(), 'mountains')).toThrow('Could not generate any pair');
+  });
+
+  it('does not repeat pairs (dedup)', () => {
+    const shown = new Set();
+    const seenPairs = new Set();
+    for (let i = 0; i < 10; i++) {
+      const pair = pickPair(peaks, shown, 'mountains');
+      const key = canonicalKey(pair[0].id, pair[1].id);
+      expect(seenPairs.has(key)).toBe(false);
+      seenPairs.add(key);
+    }
+  });
+
+  it('works with small pools across many rounds', () => {
+    const pool = [
+      { id: 1, elevation: 4000 },
+      { id: 2, elevation: 4500 },
+      { id: 3, elevation: 5000 },
+    ];
+    const shown = new Set();
+    for (let i = 0; i < 20; i++) {
+      const pair = pickPair(pool, shown, 'mountains');
+      expect(pair).toHaveLength(2);
+    }
+  });
+});

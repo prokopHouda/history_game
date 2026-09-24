@@ -1,4 +1,4 @@
-# History Game — Architecture
+# Higher or Lower Games — Architecture
 
 ## System Overview
 
@@ -6,8 +6,9 @@
 flowchart TB
     subgraph Client["Browser (2+ players)"]
         A["Next.js Pages Router"]
-        A --> SP["/ (Single Player)"]
-        A --> MP["/multiplayer (2-10 players)"]
+        A --> HOME["/ (Homescreen)<br/>mode → game wizard"]
+        A --> SP["/play/[game]<br/>Single Player"]
+        A --> MP["/play/[game]/multiplayer<br/>(2-10 players)"]
         A --> API["/api/*"]
     end
 
@@ -18,7 +19,7 @@ flowchart TB
     end
 
     subgraph Supabase["Supabase"]
-        DB[("PostgreSQL")]
+        DB[("PostgreSQL<br/>events / mountains / rooms")]
         RL["Realtime (WebSocket)"]
         DB --> RL
     end
@@ -33,6 +34,28 @@ flowchart TB
     X --> D
     RL --> MP
 ```
+
+---
+
+## Game Registry (`lib/games.js`)
+
+Every game is fully described by one entry in the `GAMES` registry. All pages, APIs and components read their game-specific behaviour from it — adding a new game means adding one registry entry plus one data table.
+
+| Config | History | Mountains | Used by |
+|--------|---------|-----------|---------|
+| `data.table` | `events` | `mountains` | room create, translate, SP/MP data load |
+| `data.translationsTable` | `event_translations` | `mountain_translations` | `/api/translate` |
+| `data.translationFkColumn` | `event_id` | `mountain_id` | `/api/translate` |
+| `mechanics.getValue` | year | elevation | pairing, scoring, filters |
+| `mechanics.getComparable` | date-aware time | elevation | winner comparison |
+| `mechanics.direction` | `lower` (earlier wins) | `higher` (taller wins) | `pickWinner()` in turn.js |
+| `mechanics.minGap` | 2 years | 50 m | pickPair exclusions |
+| `mechanics.gapScale` | 50 | 500 | proximity weight decay |
+| `mechanics.easyGap` | 100 y → +1 pt | 500 m → +1 pt | scoring (+2 below) |
+| `filters.range` | `startYear`/`endYear` | `minElevation`/`maxElevation` | SettingsPanel, Lobby, room create |
+| `filters.group` | `region` (UN M49, grouped) | `range` (plain value) | SettingsPanel, Lobby, room create |
+
+Per-game UI dictionaries live in `lib/gameUi.js` (`SP_UI`, `MP_UI` — keys verified identical across en/cs/it by tests).
 
 ---
 
@@ -97,27 +120,24 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor Player
-    participant FE as / (Next.js)
-    participant Events as / (getServerSideProps)
+    participant FE as /play/[game] (SinglePlayerGame)
     participant Supa as Supabase
-    participant D as DeepL API
-    participant Cache as event_translations
+    participant D as DeepL API (via /api/translate)
+    participant Cache as game translations table
 
-    Player->>FE: open /
-    FE->>Events: load random pair
-    Events->>Supa: SELECT * FROM events
-    Supa-->>Events: events[]
+    Player->>FE: open /play/[game]
+    FE->>Supa: SELECT * FROM <game data table>
+    Supa-->>FE: item pool[]
+    FE-->>Player: settings screen (filters + pool counter)
+    Player->>FE: start game
+    FE->>FE: pickPair(filtered pool, shownPairs)
     FE-->>Player: render cards
 
     alt Language ≠ EN
-        FE->>FE: check cache
-        FE->>Supa: SELECT * FROM event_translations WHERE lang = ?
-        Supa-->>FE: cached translations
-        alt Some missing
-            FE->>D: translate(missingIds)
-            D-->>FE: translations[]
-            FE->>Supa: INSERT INTO event_translations
-        end
+        FE->>FE: check client cache
+        FE->>D: GET /api/translate?ids=...&lang=...&game=...
+        D-->>FE: translations (cache hits + DeepL misses)
+        FE->>Cache: rows already upserted server-side
     end
 ```
 
@@ -146,9 +166,29 @@ erDiagram
         timestamptz updated_at
     }
 
+    MOUNTAINS {
+        int id PK
+        varchar short_name
+        int elevation
+        text description
+        varchar countries
+        varchar range
+        text fun_fact
+    }
+
+    MOUNTAIN_TRANSLATIONS {
+        int mountain_id PK
+        varchar lang PK
+        varchar short_name
+        text description
+        text fun_fact
+        timestamptz updated_at
+    }
+
     ROOMS {
         int id PK
         varchar code
+        varchar game
         jsonb players
         jsonb scores
         jsonb streaks
@@ -167,7 +207,10 @@ erDiagram
     }
 
     EVENTS ||--o{ EVENT_TRANSLATIONS : "translated to (FK, ON DELETE CASCADE, UNIQUE(event_id,lang))"
+    MOUNTAINS ||--o{ MOUNTAIN_TRANSLATIONS : "translated to (FK, ON DELETE CASCADE, UNIQUE(mountain_id,lang))"
 ```
+
+`rooms.game` (`'history'` | `'mountains'`, default `'history'`) determines which mechanics apply to the room's pairs — comparison direction, scoring gaps and the fun_fact source table. The room's `events` JSONB pool holds rows from the corresponding data table.
 
 ---
 
@@ -190,7 +233,7 @@ stateDiagram-v2
 ```mermaid
 flowchart TD
     A["Player submits answer"] --> B{"Is correct?"}
-    B -->|Yes| C{"Year gap ≥ 100?"}
+    B -->|Yes| C{"Value gap >= easyGap?<br/>(100 y history / 500 m mountains)"}
     C -->|Yes| D["+1 point (simple question)"]
     C -->|No| E["+2 points (tough question)"]
     B -->|No| F["0 points (no punishment)"]
@@ -206,34 +249,35 @@ flowchart TD
     M --> G
 ```
 
-| Scenario | Year Gap | Correct Points | Wrong Points | Timed Out |
-|----------|----------|---------------|--------------|-----------|
-| Simple question | ≥ 100 years | +1 | **0** | **0** |
-| Tough question | < 100 years | +2 | **0** | **0** |
+| Scenario | History gap | Mountains gap | Correct Points | Wrong Points | Timed Out |
+|----------|-------------|----------------|---------------|--------------|-----------|
+| Simple question | ≥ 100 years | ≥ 500 m | +1 | **0** | **0** |
+| Tough question | < 100 years | < 500 m | +2 | **0** | **0** |
 
 ---
 
 ## Event Pairing Algorithm (`pickPair.js`)
 
-The game generates pairs of historical events for each round. Events that are **closer in time** are preferred, but with a **hard minimum gap of 10 years** — events 10 years apart or less are completely excluded from pairing. This prevents ambiguous "too-close-to-call" rounds while still favoring challenging nearby dates over easy distant ones.
+The game generates pairs of items (events / mountains) for each round. Items that are **closer in value** (year / elevation) are preferred, but with a **hard minimum gap** — items too close together are completely excluded from pairing. This prevents ambiguous "too-close-to-call" rounds while still favoring challenging pairs over easy ones.
 
 ### Minimum Gap Rule
 
 ```
-MIN_GAP_YEARS = 10
+History:  MIN_GAP_YEARS = 2      (pairs ≤ 2 years apart never shown)
+Mountains: MIN_GAP_METERS = 50   (pairs ≤ 50 m apart never shown)
 ```
 
-Any candidate event where `gapYears ≤ 10` is **rejected immediately** before weight calculation. This applies to **all three** generation phases (weighted sampling, linear scan fallback, and nuclear fallback).
+Any candidate where `gap <= minGap` is **rejected immediately** before weight calculation. This applies to **all three** generation phases (weighted sampling, linear scan fallback, and nuclear fallback).
 
 ### Weight Function
 
-After filtering out gaps ≤ 10 years, the selection uses a **proximity-weighted random sample**. The weight for a remaining candidate is:
+After filtering out too-close candidates, the selection uses a **proximity-weighted random sample**. The weight for a remaining candidate is:
 
 ```
-weight = 1 / (1 + gapYears / 100)
+weight = 1 / exp(gap / gapScale)      history gapScale = 50 years, mountains = 500 m
 ```
 
-Where `gapYears` is the absolute difference in years between the two events.
+Where `gap` is the absolute difference between the two items' values (years / metres).
 
 ### Weight Examples
 
@@ -309,49 +353,72 @@ The single-player game also uses `pickPair` with an in-memory `Set` (reset on ea
 
 ```
 pages/
-├── index.js              # Single-player game (React state + components)
-├── multiplayer.js        # Multiplayer (React state + components, realtime subscriptions)
+├── index.js              # Homescreen: two-step wizard (single/multiplayer → game)
+├── play/
+│   └── [game]/
+│       ├── index.js      # SP route (SSG: history, mountains) → SinglePlayerGame
+│       └── multiplayer.js # MP route (SSG) → MultiplayerGame
 ├── api/
-│   ├── room.js           # create / join / update-profile / start / restart / leave / heartbeat
-│   ├── turn.js           # submit answer + calculate score + 45s deadline
+│   ├── room.js           # create / join / update-profile / start / restart / leave / heartbeat (game-aware)
+│   ├── turn.js           # submit answer + calculate score + 45s deadline (game-aware)
 │   ├── finish.js         # force finish + build full standings
-│   └── translate.js      # DeepL proxy + Supabase cache
+│   └── translate.js      # DeepL proxy + Supabase cache (game-aware tables)
 components/
-├── SettingsPanel.js      # SP: filter form (year/region/country/lang + pool counter + country flags preview)
-├── GameCard.js           # SP: event card (flags, name, desc, meta, click/keyboard, states)
-├── CountryFlags.js       # Shared: flag row from `countries` ISO codes via flagcdn.com (max 5 + "+N countries" hover tooltip); used on cards, result overlay, and filter previews
+├── SinglePlayerGame.js   # SP engine (game prop; loads pool, streaks, milestones, win at 50)
+├── MultiplayerGame.js    # MP engine (game prop; realtime subscriptions, heartbeats, turn timers)
+├── SettingsPanel.js      # SP: filter form (min/max value + group + country + lang + pool counter)
+├── GameCard.js           # SP: card (flags, name, desc, meta, click/keyboard, states)
+├── CountryFlags.js       # Shared: flag row from `countries` ISO codes via flagcdn.com
 ├── StreakBar.js          # SP: progress bar + milestone text
 ├── Hud.js                # SP: score + streak badges
 ├── LangNav.js            # Shared: EN/CS/IT language buttons
-├── Lobby.js              # MP: create/join room form (filters + rounds + room code + country flags preview)
+├── Lobby.js              # MP: create/join room form (filters + rounds + room code)
 ├── WaitingRoom.js        # MP: player list, profile editor, host start button
 ├── GameScreen.js         # MP: cards + leaderboard + round info + status
-├── MpGameCard.js         # MP: card with flags + check mark + loading spinner
-├── ResultOverlay.js     # MP: round result overlay (result + pair with flags + fun fact + round leaderboard)
+├── MpGameCard.js          # MP: card with flags + check mark + loading spinner
+├── ResultOverlay.js      # MP: round result overlay (pair + fun fact + round leaderboard)
 ├── FinalStandings.js     # MP: winner overlay with standings + restart/lobby buttons
 ├── DisconnectOverlay.js  # MP: room closed overlay
 ├── Leaderboard.js        # MP: in-game leaderboard (sorted players with scores)
 ├── RoundLeaderboard.js   # MP: per-round results (correct/wrong/timeout + points)
 ├── PlayerList.js         # MP: waiting room player list with color dots + host badges
-└── ColorPicker.js        # MP: color selection buttons for profile editor
+├── ColorPicker.js        # MP: color selection buttons for profile editor
+└── RegionSelect.js       # Shared: continent-grouped region select (history games)
 lib/
-├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, MIN_GAP_YEARS=10)
-├── eventTime.js          # Shared getEventYear() / getEventTime() — single source of truth for event dating
-├── i18n.js               # Shared base UI text (13 keys × 3 langs) + makeT() accessor factory
-├── filters.js            # Shared filterEvents() + getUniqueRegionsAndCountries() + getPoolCountriesString()
-├── translate.js          # Shared ensureTranslated() / getText() — fetch + cache translations
-├── onCardKey.js           # Shared keyboard handler factory (Enter/Space → click)
+├── games.js              # Game registry: mechanics (direction, minGap, easyGap, gapScale), data tables, helpers
+├── gameUi.js             # Per-game UI dictionaries: SP_UI + MP_UI × history/mountains × en/cs/it
+├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, game-aware gaps)
+├── eventTime.js          # getEventYear() / getEventTime() — history dating (date-aware)
+├── i18n.js               # Shared base UI text + makeT() accessor factory
+├── filters.js            # filterEvents() + getUniqueGroupsAndCountries() + getPoolCountriesString() (game-aware)
+├── translate.js          # ensureTranslated() / getText() — fetch + cache translations (game param)
+├── onCardKey.js          # Shared keyboard handler factory (Enter/Space → click)
 ├── milestones.js         # MILESTONES, getMilestone(), getNextMilestone()
 └── mpColors.js           # DEFAULT_COLORS array for multiplayer player colors
+scripts/
+├── seed-events.js        # Insert history event batches (dedupe by short_name)
+├── seed-mountains.js     # Insert mountain batches (dedupe by short_name)
+├── validate-mountains.js # Batch validation: fields, dupes, ISO codes, stats
+├── events-data/          # History event batch files
+└── mountains-data/       # Mountain batch files (starter, himalaya, karakoram, andes, alps, north-america, world)
 tests/
 └── lib/
-    ├── eventTime.test.js     # getEventYear / getEventTime (14 tests)
-    ├── filters.test.js       # filterEvents / getUniqueRegionsAndCountries (17 tests)
-    ├── pickPair.test.js      # canonicalKey / pickPair (13 tests)
-    ├── milestones.test.js    # MILESTONES / getMilestone / getNextMilestone (14 tests)
-    ├── i18n.test.js          # baseUiText / makeT (10 tests)
-    ├── onCardKey.test.js     # keyboard handler (5 tests)
-    └── translate.test.js     # ensureTranslated / getText (14 tests)
+    ├── games.test.js        # registry, pickWinner, valueGap, pointsForGap (15 tests)
+    ├── gameUi.test.js       # key parity across all dicts + game wording (21 tests)
+    ├── eventTime.test.js    # getEventYear / getEventTime (14 tests)
+    ├── filters.test.js      # filterEvents / groups / countries, history + mountains (31 tests)
+    ├── pickPair.test.js     # canonicalKey / pickPair, history + mountains (18 tests)
+    ├── milestones.test.js   # MILESTONES / getMilestone / getNextMilestone (14 tests)
+    ├── i18n.test.js         # baseUiText / makeT (10 tests)
+    ├── onCardKey.test.js    # keyboard handler (5 tests)
+    ├── regions.test.js      # continent/region taxonomy (6 tests)
+    └── translate.test.js    # ensureTranslated / getText incl. game param (15 tests)
+database/
+├── 00_create_rooms.sql       # rooms table + realtime publication
+├── 12_add_translations_constraints.sql  # event_translations FK/unique/trigger (+ update_updated_at fn)
+├── 15_create_mountains.sql   # mountains + mountain_translations (RLS: public read on mountains)
+├── 16_add_rooms_game.sql     # rooms.game column (default 'history')
+└── ...                       # other incremental migrations
 .github/workflows/
 └── ci.yml                    # GitHub Actions: lint + test on push/PR
 vitest.config.mjs             # Vitest config (jsdom env)
@@ -384,7 +451,7 @@ flowchart LR
 
 ## Testing
 
-The project uses **Vitest** with **jsdom** for unit testing. Tests cover all 8 `lib/` files (87 tests total).
+The project uses **Vitest** with **jsdom** for unit testing. Tests cover all 10 `lib/` files (149 tests total), including game-specific behaviour for both history and mountains.
 
 ### Running tests
 

@@ -2,7 +2,7 @@ import LangNav from './LangNav.js';
 import Leaderboard from './Leaderboard.js';
 import MpGameCard from './MpGameCard.js';
 
-export default function GameScreen({ room, playerId, lang, t, statusText, cardAState, cardBState, translating, onGuess, onLangChange, getText }) {
+export default function GameScreen({ room, playerId, lang, t, statusText, cardAState, cardBState, translating, onGuess, onLangChange, getText, pickAriaLabel }) {
   if (!room || !room.current_pair || room.current_pair.length < 2) return null;
 
   const [a, b] = room.current_pair;
@@ -32,7 +32,7 @@ export default function GameScreen({ room, playerId, lang, t, statusText, cardAS
           state={cardAState}
           loading={translating}
           onClick={() => onGuess('A')}
-          ariaLabel="Pick this event as earlier"
+          ariaLabel={pickAriaLabel}
           lang={lang}
           t={t}
         />
@@ -42,7 +42,7 @@ export default function GameScreen({ room, playerId, lang, t, statusText, cardAS
           state={cardBState}
           loading={translating}
           onClick={() => onGuess('B')}
-          ariaLabel="Pick this event as earlier"
+          ariaLabel={pickAriaLabel}
           lang={lang}
           t={t}
         />

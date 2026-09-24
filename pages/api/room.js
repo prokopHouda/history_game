@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { pickPair } from '../../lib/pickPair.js';
+import { getGame } from '../../lib/games.js';
+import { filterEvents } from '../../lib/filters.js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -42,27 +44,12 @@ function getHost(players) {
   return players.find((p) => p.isHost);
 }
 
-function applyFilters(events, filters) {
-  if (!filters) return events;
-  return events.filter((e) => {
-    const y = e.year_int ?? 0;
-    if (filters.startYear !== null && filters.startYear !== undefined && y < filters.startYear) return false;
-    if (filters.endYear !== null && filters.endYear !== undefined && y > filters.endYear) return false;
-    if (filters.region && e.region !== filters.region) return false;
-    if (filters.country) {
-      const list = (e.countries || '').split(',').map((c) => c.trim()).filter(Boolean);
-      if (!list.includes(filters.country)) return false;
-    }
-    return true;
-  });
-}
-
 export default async function handler(req, res) {
   const { method } = req;
 
   if (method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  const { action, roomCode, playerId, total_rounds, filters, nickname, color } = req.body;
+  const { action, roomCode, playerId, total_rounds, filters, nickname, color, game: gameKey } = req.body;
 
   // ------------------------------------------------------------------
   // HEARTBEAT
@@ -125,13 +112,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Rounds must be 5–50' });
     }
 
+    const game = getGame(gameKey);
+
     // Validate filters produce 25+ events
-    const { data: allEvents } = await supabase.from('events').select('id, short_name, date, year, year_int, description, countries, region');
+    const { data: allEvents } = await supabase.from(game.data.table).select(game.data.select);
     if (!allEvents || allEvents.length < 25) {
       return res.status(500).json({ error: 'Not enough total events in database' });
     }
 
-    const filtered = applyFilters(allEvents, filters);
+    const filtered = filterEvents(allEvents, filters, game.key);
     if (filtered.length < 25) {
       return res.status(400).json({ error: `Filter yields only ${filtered.length} events. Need at least 25.` });
     }
@@ -142,7 +131,7 @@ export default async function handler(req, res) {
 
     while (!room && attempts < 10) {
       const shownPairsSet = new Set();
-      const firstPair = pickPair(filtered, shownPairsSet);
+      const firstPair = pickPair(filtered, shownPairsSet, game.key);
       const players = [{
         id: playerId,
         nickname: nickname || 'Host',
@@ -155,6 +144,7 @@ export default async function handler(req, res) {
         .insert({
           code,
           host: playerId,
+          game: game.key,
           state: 'lobby',
           total_rounds: rounds,
           events: filtered,
@@ -276,7 +266,7 @@ export default async function handler(req, res) {
     }
 
     const shownPairsSet = new Set();
-    const firstPair = pickPair(existing.events || [], shownPairsSet);
+    const firstPair = pickPair(existing.events || [], shownPairsSet, existing.game);
     const scores = {};
     const streaks = {};
     players.forEach((p) => {

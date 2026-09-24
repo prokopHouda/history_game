@@ -1,37 +1,45 @@
 import { useState, useMemo } from 'react';
-import { filterEvents, getUniqueRegionsAndCountries, getPoolCountriesString } from '../lib/filters.js';
+import { filterEvents, getUniqueGroupsAndCountries, getPoolCountriesString } from '../lib/filters.js';
 import RegionSelect from './RegionSelect.js';
 import CountryFlags from './CountryFlags.js';
 
-export default function Lobby({ allEvents, lang, t, tf, MIN_EVENTS, onCreate, onJoin, creating, error }) {
-  const [startYear, setStartYear] = useState('');
-  const [endYear, setEndYear] = useState('');
-  const [region, setRegion] = useState('');
+export default function Lobby({ allEvents, lang, t, tf, game, MIN_EVENTS, onCreate, onJoin, creating, error }) {
+  const { range, group } = game.mechanics.filters;
+  const [minValue, setMinValue] = useState('');
+  const [maxValue, setMaxValue] = useState('');
+  const [groupValue, setGroupValue] = useState('');
   const [country, setCountry] = useState('');
   const [langSelect, setLangSelect] = useState(lang);
   const [rounds, setRounds] = useState(10);
   const [joinCode, setJoinCode] = useState('');
   const [localError, setLocalError] = useState('');
 
-  const { regions, countries } = useMemo(
-    () => getUniqueRegionsAndCountries(allEvents),
-    [allEvents]
+  const { groups, countries } = useMemo(
+    () => getUniqueGroupsAndCountries(allEvents, game.key),
+    [allEvents, game.key]
   );
 
+  const filters = useMemo(() => ({
+    [range.minKey]: parseInt(minValue, 10) || null,
+    [range.maxKey]: parseInt(maxValue, 10) || null,
+    [group.key]: groupValue,
+    country,
+  }), [minValue, maxValue, groupValue, country, range.minKey, range.maxKey, group.key]);
+
   const { count, valid } = useMemo(() => {
-    const sy = parseInt(startYear, 10) || null;
-    const ey = parseInt(endYear, 10) || null;
-    if (sy !== null && ey !== null && sy > ey) return { count: 0, valid: false };
-    const c = filterEvents(allEvents, { startYear: sy, endYear: ey, region, country }).length;
+    const min = filters[range.minKey];
+    const max = filters[range.maxKey];
+    if (min !== null && max !== null && min > max) return { count: 0, valid: false };
+    const c = filterEvents(allEvents, filters, game.key).length;
     return { count: c, valid: c >= MIN_EVENTS };
-  }, [allEvents, startYear, endYear, region, country, MIN_EVENTS]);
+  }, [allEvents, filters, game.key, MIN_EVENTS, range.minKey, range.maxKey]);
 
   const poolCountries = useMemo(() => {
-    const sy = parseInt(startYear, 10) || null;
-    const ey = parseInt(endYear, 10) || null;
-    if (sy !== null && ey !== null && sy > ey) return '';
-    return getPoolCountriesString(filterEvents(allEvents, { startYear: sy, endYear: ey, region, country }));
-  }, [allEvents, startYear, endYear, region, country]);
+    const min = filters[range.minKey];
+    const max = filters[range.maxKey];
+    if (min !== null && max !== null && min > max) return '';
+    return getPoolCountriesString(filterEvents(allEvents, filters, game.key));
+  }, [allEvents, filters, game.key, range.minKey, range.maxKey]);
 
   function handleCreate() {
     const r = parseInt(rounds, 10) || 10;
@@ -44,12 +52,6 @@ export default function Lobby({ allEvents, lang, t, tf, MIN_EVENTS, onCreate, on
       return;
     }
     setLocalError('');
-    const filters = {
-      startYear: parseInt(startYear, 10) || null,
-      endYear: parseInt(endYear, 10) || null,
-      region,
-      country,
-    };
     onCreate(filters, r, langSelect);
   }
 
@@ -80,25 +82,32 @@ export default function Lobby({ allEvents, lang, t, tf, MIN_EVENTS, onCreate, on
 
       <div className="field-row">
         <div className="field">
-          <label htmlFor="mp-startYear">{t('startYear')}</label>
-          <input type="number" id="mp-startYear" placeholder={t('placeholderStartYear')} value={startYear} onChange={(e) => { setStartYear(e.target.value); setLocalError(''); }} />
+          <label htmlFor="mp-minValue">{t('minValueLabel')}</label>
+          <input type="number" id="mp-minValue" placeholder={t('placeholderMinValue')} value={minValue} onChange={(e) => { setMinValue(e.target.value); setLocalError(''); }} />
         </div>
         <div className="field">
-          <label htmlFor="mp-endYear">{t('endYear')}</label>
-          <input type="number" id="mp-endYear" placeholder={t('placeholderEndYear')} value={endYear} onChange={(e) => { setEndYear(e.target.value); setLocalError(''); }} />
+          <label htmlFor="mp-maxValue">{t('maxValueLabel')}</label>
+          <input type="number" id="mp-maxValue" placeholder={t('placeholderMaxValue')} value={maxValue} onChange={(e) => { setMaxValue(e.target.value); setLocalError(''); }} />
         </div>
       </div>
 
       <div className="field">
-        <label htmlFor="mp-regionFilter">{t('region')}</label>
-        <RegionSelect
-          id="mp-regionFilter"
-          value={region}
-          onChange={(v) => { setRegion(v); setLocalError(''); }}
-          regions={regions}
-          t={t}
-          tf={tf}
-        />
+        <label htmlFor="mp-groupFilter">{t('groupLabel')}</label>
+        {group.grouped ? (
+          <RegionSelect
+            id="mp-groupFilter"
+            value={groupValue}
+            onChange={(v) => { setGroupValue(v); setLocalError(''); }}
+            regions={groups}
+            t={t}
+            tf={tf}
+          />
+        ) : (
+          <select id="mp-groupFilter" value={groupValue} onChange={(e) => { setGroupValue(e.target.value); setLocalError(''); }}>
+            <option value="">{t('allRegions')}</option>
+            {groups.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
+        )}
       </div>
 
       <div className="field">
@@ -116,7 +125,7 @@ export default function Lobby({ allEvents, lang, t, tf, MIN_EVENTS, onCreate, on
 
       <div id="mp-poolCounter" className="pool-counter" style={{ color: counterColor }}>
         {valid
-          ? `${count} events available ✅`
+          ? tf('poolAvailable', { count })
           : tf('needEvents', { min: MIN_EVENTS, count })}
       </div>
 

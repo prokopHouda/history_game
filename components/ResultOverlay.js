@@ -28,13 +28,13 @@ export default function ResultOverlay({ result, room, playerId, t, earlierText, 
             <div style={{ textAlign: 'center' }}>
               <CountryFlags countries={pairTextA.countries} lang={lang} t={t} />
               <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{pairTextA.short_name}</div>
-              <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{pairTextA.date}</div>
+              <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{pairTextA.valueLabel}</div>
             </div>
             <div style={{ color: '#94a3b8' }}>vs</div>
             <div style={{ textAlign: 'center' }}>
               <CountryFlags countries={pairTextB.countries} lang={lang} t={t} />
               <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{pairTextB.short_name}</div>
-              <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{pairTextB.date}</div>
+              <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{pairTextB.valueLabel}</div>
             </div>
           </div>
           {funFactText && (

@@ -77,8 +77,18 @@ describe('ensureTranslated', () => {
     });
     const cache = { cs: {} };
     await ensureTranslated([{ id: 1, short_name: 'Hello' }], cache, 'cs');
-    expect(global.fetch).toHaveBeenCalledWith('/api/translate?ids=1&lang=cs');
+    expect(global.fetch).toHaveBeenCalledWith('/api/translate?ids=1&lang=cs&game=history');
     expect(cache.cs[1].short_name).toBe('Ahoj');
+  });
+
+  it('passes game param to the API', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ '1': { short_name: 'Monte Bianco' } }),
+    });
+    const cache = { it: {} };
+    await ensureTranslated([{ id: 1, short_name: 'Mont Blanc' }], cache, 'it', 'mountains');
+    expect(global.fetch).toHaveBeenCalledWith('/api/translate?ids=1&lang=it&game=mountains');
   });
 
   it('fetches only missing events, not cached ones', async () => {
@@ -91,7 +101,7 @@ describe('ensureTranslated', () => {
       { id: 1, short_name: 'A' },
       { id: 2, short_name: 'B' },
     ], cache, 'cs');
-    expect(global.fetch).toHaveBeenCalledWith('/api/translate?ids=2&lang=cs');
+    expect(global.fetch).toHaveBeenCalledWith('/api/translate?ids=2&lang=cs&game=history');
   });
 
   it('handles fetch failure gracefully (no throw)', async () => {
@@ -127,6 +137,6 @@ describe('ensureTranslated', () => {
     });
     const cache = { cs: {} };
     await ensureTranslated([null, undefined, { id: 1, short_name: 'Hello' }], cache, 'cs');
-    expect(global.fetch).toHaveBeenCalledWith('/api/translate?ids=1&lang=cs');
+    expect(global.fetch).toHaveBeenCalledWith('/api/translate?ids=1&lang=cs&game=history');
   });
 });

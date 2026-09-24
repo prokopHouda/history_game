@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterEvents, getUniqueRegionsAndCountries } from '../../lib/filters.js';
+import { filterEvents, getUniqueRegionsAndCountries, getUniqueGroupsAndCountries } from '../../lib/filters.js';
 
 const sampleEvents = [
   { id: 1, year: 100, region: 'Eastern Europe', countries: 'CZ, SK' },
@@ -147,5 +147,77 @@ describe('getUniqueRegionsAndCountries', () => {
     ];
     const { countries } = getUniqueRegionsAndCountries(events);
     expect(countries).toEqual(['JP']);
+  });
+});
+
+describe('filterEvents — mountains game', () => {
+  const peaks = [
+    { id: 1, elevation: 4000, range: 'Alps', countries: 'IT' },
+    { id: 2, elevation: 8000, range: 'Himalayas', countries: 'NP' },
+    { id: 3, elevation: 6000, range: 'Alps', countries: 'CH, IT' },
+    { id: 4, elevation: 2000, range: 'Pyrenees', countries: 'FR, ES' },
+  ];
+
+  it('returns all when no filters', () => {
+    expect(filterEvents(peaks, null, 'mountains')).toHaveLength(4);
+    expect(filterEvents(peaks, {}, 'mountains')).toHaveLength(4);
+  });
+
+  it('filters by minElevation', () => {
+    const result = filterEvents(peaks, { minElevation: 5000 }, 'mountains');
+    expect(result.map(e => e.id)).toEqual([2, 3]);
+  });
+
+  it('filters by maxElevation', () => {
+    const result = filterEvents(peaks, { maxElevation: 4000 }, 'mountains');
+    expect(result.map(e => e.id)).toEqual([1, 4]);
+  });
+
+  it('filters by elevation range', () => {
+    const result = filterEvents(peaks, { minElevation: 2500, maxElevation: 7000 }, 'mountains');
+    expect(result.map(e => e.id)).toEqual([1, 3]);
+  });
+
+  it('filters by range (plain value, no continent grouping)', () => {
+    const result = filterEvents(peaks, { range: 'Alps' }, 'mountains');
+    expect(result.map(e => e.id)).toEqual([1, 3]);
+  });
+
+  it('matches multi-country peaks', () => {
+    const result = filterEvents(peaks, { country: 'ES' }, 'mountains');
+    expect(result.map(e => e.id)).toEqual([4]);
+  });
+
+  it('combines elevation + range + country', () => {
+    const result = filterEvents(peaks, { minElevation: 3000, range: 'Alps', country: 'CH' }, 'mountains');
+    expect(result.map(e => e.id)).toEqual([3]);
+  });
+
+  it('ignores history filter keys for mountains', () => {
+    const result = filterEvents(peaks, { startYear: 9999, endYear: 0, region: 'Alps' }, 'mountains');
+    expect(result).toHaveLength(4);
+  });
+
+  it('ignores mountains filter keys for history', () => {
+    const result = filterEvents(sampleEvents, { minElevation: 99999, range: 'Eastern Europe' }, 'history');
+    expect(result).toHaveLength(5);
+  });
+});
+
+describe('getUniqueGroupsAndCountries — mountains game', () => {
+  const peaks = [
+    { id: 1, elevation: 4000, range: 'Alps', countries: 'IT' },
+    { id: 2, elevation: 8000, range: 'Himalayas', countries: 'NP' },
+    { id: 3, elevation: 6000, range: 'Alps', countries: 'CH, IT' },
+  ];
+
+  it('extracts unique sorted groups (ranges)', () => {
+    const { groups } = getUniqueGroupsAndCountries(peaks, 'mountains');
+    expect(groups).toEqual(['Alps', 'Himalayas']);
+  });
+
+  it('extracts unique sorted countries', () => {
+    const { countries } = getUniqueGroupsAndCountries(peaks, 'mountains');
+    expect(countries).toEqual(['CH', 'IT', 'NP']);
   });
 });

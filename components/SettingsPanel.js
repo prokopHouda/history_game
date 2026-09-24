@@ -1,55 +1,55 @@
 import { useState, useMemo } from 'react';
-import { filterEvents, getUniqueRegionsAndCountries, getPoolCountriesString } from '../lib/filters.js';
+import { filterEvents, getUniqueGroupsAndCountries, getPoolCountriesString } from '../lib/filters.js';
 import RegionSelect from './RegionSelect.js';
 import CountryFlags from './CountryFlags.js';
 
-export default function SettingsPanel({ allEvents, lang, t, tf, MIN_EVENTS, onStart }) {
-  const [startYear, setStartYear] = useState('');
-  const [endYear, setEndYear] = useState('');
-  const [region, setRegion] = useState('');
+export default function SettingsPanel({ allEvents, lang, t, tf, game, MIN_EVENTS, onStart }) {
+  const { range, group } = game.mechanics.filters;
+  const [minValue, setMinValue] = useState('');
+  const [maxValue, setMaxValue] = useState('');
+  const [groupValue, setGroupValue] = useState('');
   const [country, setCountry] = useState('');
   const [langSelect, setLangSelect] = useState(lang);
   const [error, setError] = useState('');
 
-  const { regions, countries } = useMemo(
-    () => getUniqueRegionsAndCountries(allEvents),
-    [allEvents]
+  const { groups, countries } = useMemo(
+    () => getUniqueGroupsAndCountries(allEvents, game.key),
+    [allEvents, game.key]
   );
 
+  const filters = useMemo(() => ({
+    [range.minKey]: parseInt(minValue, 10) || null,
+    [range.maxKey]: parseInt(maxValue, 10) || null,
+    [group.key]: groupValue,
+    country,
+  }), [minValue, maxValue, groupValue, country, range.minKey, range.maxKey, group.key]);
+
   const { count, valid } = useMemo(() => {
-    const sy = parseInt(startYear, 10) || null;
-    const ey = parseInt(endYear, 10) || null;
-    if (sy !== null && ey !== null && sy > ey) return { count: 0, valid: false };
-    const c = filterEvents(allEvents, { startYear: sy, endYear: ey, region, country }).length;
+    const min = filters[range.minKey];
+    const max = filters[range.maxKey];
+    if (min !== null && max !== null && min > max) return { count: 0, valid: false };
+    const c = filterEvents(allEvents, filters, game.key).length;
     return { count: c, valid: c >= MIN_EVENTS };
-  }, [allEvents, startYear, endYear, region, country, MIN_EVENTS]);
+  }, [allEvents, filters, game.key, MIN_EVENTS, range.minKey, range.maxKey]);
 
   const poolCountries = useMemo(() => {
-    const sy = parseInt(startYear, 10) || null;
-    const ey = parseInt(endYear, 10) || null;
-    if (sy !== null && ey !== null && sy > ey) return '';
-    return getPoolCountriesString(filterEvents(allEvents, { startYear: sy, endYear: ey, region, country }));
-  }, [allEvents, startYear, endYear, region, country]);
+    const min = filters[range.minKey];
+    const max = filters[range.maxKey];
+    if (min !== null && max !== null && min > max) return '';
+    return getPoolCountriesString(filterEvents(allEvents, filters, game.key));
+  }, [allEvents, filters, game.key, range.minKey, range.maxKey]);
 
-  function updateStartYear(v) { setStartYear(v); setError(''); }
-  function updateEndYear(v) { setEndYear(v); setError(''); }
-  function updateRegion(v) { setRegion(v); setError(''); }
+  function updateMin(v) { setMinValue(v); setError(''); }
+  function updateMax(v) { setMaxValue(v); setError(''); }
+  function updateGroup(v) { setGroupValue(v); setError(''); }
   function updateCountry(v) { setCountry(v); setError(''); }
 
   function handleStart() {
-    const sy = parseInt(startYear, 10) || null;
-    const ey = parseInt(endYear, 10) || null;
     if (!valid) {
       setError(`${t('needMore')} ${MIN_EVENTS} ${t('toPlay')} (${count})`);
       return;
     }
-    onStart({
-      startYear: sy,
-      endYear: ey,
-      region,
-      country,
-      lang: langSelect,
-    });
+    onStart({ ...filters, lang: langSelect });
   }
 
   const counterColor = valid ? '#34d399' : '#f87171';
@@ -60,37 +60,46 @@ export default function SettingsPanel({ allEvents, lang, t, tf, MIN_EVENTS, onSt
 
       <div className="field-row">
         <div className="field">
-          <label htmlFor="startYear">{t('startYear')}</label>
+          <label htmlFor="minValue">{t('minValueLabel')}</label>
           <input
             type="number"
-            id="startYear"
-            placeholder="e.g. 1500"
-            value={startYear}
-            onChange={(e) => updateStartYear(e.target.value)}
+            id="minValue"
+            placeholder={t('placeholderMinValue')}
+            value={minValue}
+            onChange={(e) => updateMin(e.target.value)}
           />
         </div>
         <div className="field">
-          <label htmlFor="endYear">{t('endYear')}</label>
+          <label htmlFor="maxValue">{t('maxValueLabel')}</label>
           <input
             type="number"
-            id="endYear"
-            placeholder="e.g. 2000"
-            value={endYear}
-            onChange={(e) => updateEndYear(e.target.value)}
+            id="maxValue"
+            placeholder={t('placeholderMaxValue')}
+            value={maxValue}
+            onChange={(e) => updateMax(e.target.value)}
           />
         </div>
       </div>
 
       <div className="field">
-        <label htmlFor="regionFilter">{t('region')}</label>
-        <RegionSelect
-          id="regionFilter"
-          value={region}
-          onChange={updateRegion}
-          regions={regions}
-          t={t}
-          tf={tf}
-        />
+        <label htmlFor="groupFilter">{t('groupLabel')}</label>
+        {group.grouped ? (
+          <RegionSelect
+            id="groupFilter"
+            value={groupValue}
+            onChange={updateGroup}
+            regions={groups}
+            t={t}
+            tf={tf}
+          />
+        ) : (
+          <select id="groupFilter" value={groupValue} onChange={(e) => updateGroup(e.target.value)}>
+            <option value="">{t('allRegions')}</option>
+            {groups.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="field">

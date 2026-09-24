@@ -6,12 +6,6 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  const CRON_SECRET = process.env.CRON_SECRET;
-  const auth = req.headers.authorization;
-  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
-    return res.status(401).json({ error: 'unauthorized' });
-  }
-
   const start = Date.now();
   const { data, error } = await supabase
     .from('events')

@@ -21,7 +21,7 @@ GitHub is the deployment source of truth: pushes to the `main` branch auto-deplo
 Git is installed via GitHub Desktop. Add this directory to `PATH` before every git command:
 
 ```powershell
-$env:PATH += ';C:\Users\proko\AppData\Local\GitHubDesktop\app-3.6.4\resources\app\git\cmd'
+$env:PATH += ';C:\Users\proko\AppData\Local\GitHubDesktop\app-3.6.6\resources\app\git\cmd'
 ```
 
 > **Note:** The GitHub Desktop version directory (`app-3.6.4`) changes with updates. If the path fails, list subdirectories of `C:\Users\proko\AppData\Local\GitHubDesktop` and use the latest `app-*\resources\app\git\cmd`.
@@ -64,6 +64,6 @@ No manual Vercel commands are needed.
 | Local project root | `C:\Users\proko\Documents\GitHub\history_game` |
 | Git remote | `https://github.com/prokopHouda/history_game.git` |
 | Branch | `main` |
-| Git executable | `C:\Users\proko\AppData\Local\GitHubDesktop\app-3.6.4\resources\app\git\cmd\git.exe` |
+| Git executable | `C:\Users\proko\AppData\Local\GitHubDesktop\app-3.6.6\resources\app\git\cmd\git.exe` |
 | Vercel project | `prokop-s-projects/history-game` |
 | Production alias | `https://history-game-ten.vercel.app` |

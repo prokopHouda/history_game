@@ -300,7 +300,8 @@ export default function SinglePlayerGame({ game: gameKey }) {
 
           <Hud score={score} streak={streak} t={t} />
 
-          <StreakBar streak={streak} t={t} />
+           <StreakBar streak={streak} t={t} gameKey={game.key} />
+
 
           {lastResult && <ResultFeedback result={lastResult} t={t} tf={tf} getLabel={getLabel} />}
 

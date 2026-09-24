@@ -1,8 +1,8 @@
 import { MILESTONES, getMilestone, getNextMilestone } from '../lib/milestones.js';
 
-export default function StreakBar({ streak, t }) {
-  const current = getMilestone(streak);
-  const next = getNextMilestone(streak);
+export default function StreakBar({ streak, t, gameKey = 'history' }) {
+  const current = getMilestone(streak, gameKey);
+  const next = getNextMilestone(streak, gameKey);
   const isMilestone = streak > 0 && streak % 5 === 0 && current;
   const mod = streak % 5;
   const pct = isMilestone ? 100 : (mod / 5) * 100;
@@ -13,10 +13,10 @@ export default function StreakBar({ streak, t }) {
   } else if (next && streak < 50) {
     text = `${next.badge} ${next.name} — ${t('nextReward')} ${Math.ceil(streak / 5) * 5}`;
   } else if (streak >= 50) {
-    const final = MILESTONES[50];
+    const final = MILESTONES[gameKey][50];
     text = `👑 ${final.badge} ${final.name}`;
   } else {
-    const first = MILESTONES[5];
+    const first = MILESTONES[gameKey][5];
     text = `${first.badge} ${first.name} — ${t('nextReward')} 5`;
   }
 

@@ -53,7 +53,7 @@ Every game is fully described by one entry in the `GAMES` registry. All pages, A
 | `mechanics.gapScale` | 50 | 500 | proximity weight decay |
 | `mechanics.easyGap` | 100 y → +1 pt | 500 m → +1 pt | scoring (+2 below) |
 | `filters.range` | `startYear`/`endYear` | `minElevation`/`maxElevation` | SettingsPanel, Lobby, room create |
-| `filters.group` | `region` (UN M49, grouped) | `range` (plain value) | SettingsPanel, Lobby, room create |
+| `filters.group` | `region` (UN M49, grouped) | `region` (UN M49, grouped) | SettingsPanel, Lobby, room create |
 
 Per-game UI dictionaries live in `lib/gameUi.js` (`SP_UI`, `MP_UI` — keys verified identical across en/cs/it by tests).
 
@@ -173,6 +173,7 @@ erDiagram
         text description
         varchar countries
         varchar range
+        varchar region
         text fun_fact
     }
 

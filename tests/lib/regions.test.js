@@ -16,13 +16,14 @@ describe('regions taxonomy', () => {
     }
   });
 
-  it('CONTINENTS lists the 5 continents', () => {
-    expect(CONTINENTS).toEqual(['Africa', 'Americas', 'Asia', 'Europe', 'Oceania']);
+  it('CONTINENTS lists the 6 continents', () => {
+    expect(CONTINENTS).toEqual(['Africa', 'Americas', 'Asia', 'Europe', 'Oceania', 'Antarctica']);
   });
 
   it('isContinent recognises continent keys', () => {
     expect(isContinent('Europe')).toBe(true);
     expect(isContinent('Asia')).toBe(true);
+    expect(isContinent('Antarctica')).toBe(true);
     expect(isContinent('Eastern Europe')).toBe(false);
     expect(isContinent('')).toBe(false);
   });

@@ -7,6 +7,7 @@ export const mountainsBatch = [
       "The highest mountain on Earth, located in the Mahalangur Himal sub-range of the Himalayas on the border between Nepal and Tibet.",
     countries: "NP, CN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Everest grows about 4 mm taller every year due to tectonic plate movement pushing India into Asia.",
   },
@@ -18,6 +19,7 @@ export const mountainsBatch = [
       "The second-highest mountain on Earth, located on the border between Pakistan and China in the Karakoram range.",
     countries: "PK, CN",
     range: "Karakoram",
+    region: "Southern Asia",
     fun_fact:
       "K2 is considered one of the most dangerous mountains to climb, with a fatality rate far higher than Everest's.",
   },
@@ -29,6 +31,7 @@ export const mountainsBatch = [
       "The third-highest mountain in the world, sitting on the border between Nepal and the Indian state of Sikkim.",
     countries: "NP, IN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Climbers traditionally stop a few metres short of Kangchenjunga's summit to honour a promise made to local rulers.",
   },
@@ -40,6 +43,7 @@ export const mountainsBatch = [
       "The fourth-highest mountain on Earth, connected to Everest's South Col and lying on the border of Nepal and Tibet.",
     countries: "NP, CN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Lhotse's name means 'South Peak' in Tibetan, as it lies directly south of Everest.",
   },
@@ -51,6 +55,7 @@ export const mountainsBatch = [
       "The fifth-highest mountain in the world, an isolated peak in the Himalayas shaped like a four-sided pyramid, southeast of Everest.",
     countries: "NP, CN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Makalu lies just 19 km southeast of Everest, yet was first summited four years later, in 1955.",
   },
@@ -62,6 +67,7 @@ export const mountainsBatch = [
       "The highest mountain in the Alps and Western Europe, rising on the border between France and Italy near the town of Chamonix.",
     countries: "FR, IT",
     range: "Alps",
+    region: "Western Europe",
     fun_fact:
       "The exact height of Mont Blanc changes by more than two metres between years because of wind-blown snow on its summit.",
   },
@@ -73,6 +79,7 @@ export const mountainsBatch = [
       "One of the most famous mountains in the Alps, a near-symmetrical pyramid on the border between Switzerland and Italy.",
     countries: "CH, IT",
     range: "Alps",
+    region: "Western Europe",
     fun_fact:
       "The Matterhorn's iconic shape inspired the triangular packaging of the Toblerone chocolate bar.",
   },
@@ -84,6 +91,7 @@ export const mountainsBatch = [
       "The highest mountain in Europe proper, a dormant volcano in the Caucasus Mountains in southern Russia.",
     countries: "RU",
     range: "Caucasus",
+    region: "Eastern Europe",
     fun_fact:
       "Elbrus last erupted around 50 AD, and its twin summit cones were once separate volcanoes.",
   },
@@ -95,6 +103,7 @@ export const mountainsBatch = [
       "The highest mountain in Africa and the highest free-standing mountain in the world, a dormant volcano in Tanzania.",
     countries: "TZ",
     range: "Kilimanjaro",
+    region: "Eastern Africa",
     fun_fact:
       "Kilimanjaro has five climate zones, from farmland at its base to an arctic summit — like walking from the equator to the poles.",
   },
@@ -106,6 +115,7 @@ export const mountainsBatch = [
       "The highest mountain in North America, located in Alaska and famous for having one of the largest visible bases of any mountain on land.",
     countries: "US",
     range: "Alaska Range",
+    region: "Northern America",
     fun_fact:
       "Denali's base-to-peak height is greater than Everest's — about 5500 m of pure rise from the surrounding lowlands.",
   },
@@ -117,6 +127,7 @@ export const mountainsBatch = [
       "The highest mountain outside Asia, located in the Andes mountain range in Argentina near the border with Chile.",
     countries: "AR",
     range: "Andes",
+    region: "South America",
     fun_fact:
       "Aconcagua is so high that many climbers need supplemental oxygen, even though it requires no technical climbing skills.",
   },
@@ -128,6 +139,7 @@ export const mountainsBatch = [
       "The highest mountain in Antarctica, part of the Sentinel Range of the Ellsworth Mountains.",
     countries: "AQ",
     range: "Ellsworth Mountains",
+    region: "Antarctica",
     fun_fact:
       "Vinson Massif was unknown to humanity until 1958 — it was first spotted by a US Air Force reconnaissance flight.",
   },
@@ -139,6 +151,7 @@ export const mountainsBatch = [
       "The highest mountain in Australia, a modest peak in the Snowy Mountains of New South Wales.",
     countries: "AU",
     range: "Snowy Mountains",
+    region: "Australia & New Zealand",
     fun_fact:
       "Kosciuszko was named by explorer Paul Strzelecki in 1840 after the Polish hero Tadeusz Kościuszko.",
   },
@@ -150,6 +163,7 @@ export const mountainsBatch = [
       "Japan's highest mountain, an active stratovolcano with an almost perfectly symmetrical cone, southwest of Tokyo.",
     countries: "JP",
     range: "Japanese Alps",
+    region: "Eastern Asia",
     fun_fact:
       "Fuji's last eruption was in 1707, and the ash reached as far as Edo (modern Tokyo), 100 km away.",
   },
@@ -161,6 +175,7 @@ export const mountainsBatch = [
       "The highest mountain in the contiguous United States, located on the boundary of Sequoia National Park in California.",
     countries: "US",
     range: "Sierra Nevada",
+    region: "Northern America",
     fun_fact:
       "The summit of Whitney sits only 136 km from the lowest point in North America — Badwater Basin in Death Valley.",
   },
@@ -172,6 +187,7 @@ export const mountainsBatch = [
       "The highest mountain in Germany, located on the Austrian border in the Wetterstein range of the Alps.",
     countries: "DE, AT",
     range: "Alps",
+    region: "Western Europe",
     fun_fact:
       "Five glaciers cling to the Zugspitze's slopes, though they have been shrinking steadily for decades.",
   },

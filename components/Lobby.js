@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { filterEvents, getUniqueGroupsAndCountries, getPoolCountriesString } from '../lib/filters.js';
+import { getCountryName, sortCountriesByLocalizedName } from '../lib/countries.js';
 import RegionSelect from './RegionSelect.js';
 import CountryFlags from './CountryFlags.js';
 
@@ -17,6 +18,11 @@ export default function Lobby({ allEvents, lang, t, tf, game, MIN_EVENTS, onCrea
   const { groups, countries } = useMemo(
     () => getUniqueGroupsAndCountries(allEvents, game.key),
     [allEvents, game.key]
+  );
+
+  const sortedCountries = useMemo(
+    () => sortCountriesByLocalizedName(countries, lang),
+    [countries, lang]
   );
 
   const filters = useMemo(() => ({
@@ -114,7 +120,7 @@ export default function Lobby({ allEvents, lang, t, tf, game, MIN_EVENTS, onCrea
         <label htmlFor="mp-countryFilter">{t('country')}</label>
         <select id="mp-countryFilter" value={country} onChange={(e) => { setCountry(e.target.value); setLocalError(''); }}>
           <option value="">{t('allCountries')}</option>
-          {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+          {sortedCountries.map((c) => <option key={c} value={c}>{getCountryName(c, lang)}</option>)}
         </select>
       </div>
 

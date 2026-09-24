@@ -32,7 +32,7 @@
   - Unique constraint on `(event_id, lang)` — no duplicate translations
   - FK to `events(id)` with `ON DELETE CASCADE` — orphans auto-cleaned
   - `updated_at` auto-updates on row change (trigger) — available for future cache TTL logic
-- **`mountains` table**: `id, short_name, elevation (int), description, countries, range, fun_fact` — mirrors `events` (migration `database/15_create_mountains.sql`; RLS: public read on `mountains`, translations service-only)
+- **`mountains` table**: `id, short_name, elevation (int), description, countries, range, region, fun_fact` — mirrors `events` (migrations `database/15_create_mountains.sql`, `database/17_add_mountains_region.sql`; RLS: public read on `mountains`, translations service-only). `region` uses the same UN M49 sub-regions as `events.region`; `range` (mountain range) is kept as data but no longer a filter.
 - **`mountain_translations` table**: `mountain_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
 - **`rooms` table** (multiplayer): `id, code, game, host, state, events (pool JSONB), current_pair, scores, streaks, current_round, answered, winner, shown_pairs, heartbeats, created_at/updated_at`
   - `game`: `'history'` (default) or `'mountains'` — set at create, read by turn/translate logic
@@ -49,7 +49,7 @@
 | minGap (never paired) | 2 years | 50 m |
 | easyGap (+1 / +2 below) | 100 years | 500 m |
 | gapScale (weight decay) | 50 | 500 |
-| Filter keys | `startYear`/`endYear`, `region`, `country` | `minElevation`/`maxElevation`, `range`, `country` |
+| Filter keys | `startYear`/`endYear`, `region`, `country` | `minElevation`/`maxElevation`, `region`, `country` |
 | UI dicts | `SP_UI.history` / `MP_UI.history` in `lib/gameUi.js` | `SP_UI.mountains` / `MP_UI.mountains` |
 
 ## Environment variables
@@ -83,7 +83,7 @@ npm run build    # next build (must have env vars set)
 
 ## i18n
 Built-in languages: `en`, `cs`, `it`. Language stored in `localStorage('gameLang')`, defaults to `en`.
-Per-game UI dictionaries live in `lib/gameUi.js` (`SP_UI`, `MP_UI` — key parity across languages enforced by tests). Item data is translated via `/api/translate`.
+Per-game UI dictionaries live in `lib/gameUi.js` (`SP_UI`, `MP_UI` — key parity across languages enforced by tests). Item data is translated via `/api/translate`. Country names in filter dropdowns are localized via `Intl.DisplayNames` (`lib/countries.js`); country codes remain ISO-2 in the data.
 
 ## Adding a new game
 1. Add an entry to `GAMES` in `lib/games.js` (mechanics + data tables + filter keys)

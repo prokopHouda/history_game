@@ -7,6 +7,7 @@ export const himalayaBatch = [
       "The tenth-highest mountain in the world, located in north-central Nepal. Its name means 'Goddess of the Harvests' in Sanskrit.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Annapurna I was the first 8000 m peak ever climbed, summited in 1950 by a French expedition — before Everest.",
   },
@@ -18,6 +19,7 @@ export const himalayaBatch = [
       "The seventh-highest mountain in the world, a dramatic massif rising alone in north-central Nepal, west of the Annapurna range.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "From 1808 to 1838, Dhaulagiri was believed to be the highest mountain in the world, until Kangchenjunga was measured higher.",
   },
@@ -29,6 +31,7 @@ export const himalayaBatch = [
       "The eighth-highest mountain in the world, located in the Mansiri Himal of Nepal. Its name means 'Mountain of the Spirit'.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Manaslu was first climbed in 1956 by a Japanese expedition, and it remains a special symbol of Japanese mountaineering.",
   },
@@ -40,6 +43,7 @@ export const himalayaBatch = [
       "The ninth-highest mountain on Earth, a colossal isolated massif at the western end of the Himalayas in Pakistan.",
     countries: "PK",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Nanga Parbat earned the nickname 'Killer Mountain' after dozens of climbers died attempting it before the first ascent in 1953.",
   },
@@ -51,6 +55,7 @@ export const himalayaBatch = [
       "The sixth-highest mountain in the world, on the China-Nepal border just west of Everest, considered the most climbable of the 8000 m peaks.",
     countries: "CN, NP",
     range: "Himalayas",
+    region: "Eastern Asia",
     fun_fact:
       "Cho Oyu means 'Turquoise Goddess' in Tibetan, and it has the highest summit success rate of any 8000 m mountain.",
   },
@@ -62,6 +67,7 @@ export const himalayaBatch = [
       "The fourteenth-highest mountain in the world and the only 8000 m peak located entirely within Tibet.",
     countries: "CN",
     range: "Himalayas",
+    region: "Eastern Asia",
     fun_fact:
       "Shishapangma was the last of the fourteen 8000 m peaks to be climbed — it was not summited until 1964.",
   },
@@ -73,6 +79,7 @@ export const himalayaBatch = [
       "A high peak in the Khumbu region between Cho Oyu and Everest, on the border of Nepal and Tibet.",
     countries: "CN, NP",
     range: "Himalayas",
+    region: "Eastern Asia",
     fun_fact:
       "Gyachung Kang was first climbed in 1964 by a Japanese expedition — the same year Shishapangma was summited.",
   },
@@ -84,6 +91,7 @@ export const himalayaBatch = [
       "The second-highest peak of the Mansiri Himal in Nepal, southeast of Manaslu, a steep and complex mountain.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Himalchuli is one of the least-climbed major peaks of its height, with only a small number of successful ascents.",
   },
@@ -95,6 +103,7 @@ export const himalayaBatch = [
       "A dramatic ridge mountain immediately west of Everest in the Khumbu region. Its name means 'West Peak' in Tibetan.",
     countries: "NP, CN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Nuptse sits so close to Everest that it appears in almost every photograph of the world's highest mountain.",
   },
@@ -106,6 +115,7 @@ export const himalayaBatch = [
       "The second-highest mountain in the Indian state of Uttarakhand, a giant of the Garhwal Himalaya near the Tibet border.",
     countries: "IN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "When it was climbed in 1931, Kamet became the highest summit ever reached at that time — the first peak above 7500 m.",
   },
@@ -117,6 +127,7 @@ export const himalayaBatch = [
       "A spectacular steep-sided peak in Nepal, also known as Kumbhakarna, west of Kangchenjunga.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Jannu's enormous west face is one of the most difficult big-wall climbs in the Himalayas.",
   },
@@ -128,6 +139,7 @@ export const himalayaBatch = [
       "The highest mountain in Bhutan, on the border with Tibet, a remote and untouched giant.",
     countries: "BT, CN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Gangkhar Puensum is the highest unclimbed mountain in the world — Bhutan has banned climbing on peaks above 6000 m.",
   },
@@ -139,6 +151,7 @@ export const himalayaBatch = [
       "The highest peak of the Changtse massif in Tibet, directly north of Everest across the Rongbuk Glacier.",
     countries: "CN",
     range: "Himalayas",
+    region: "Eastern Asia",
     fun_fact:
       "Changtse means 'North Peak' in Tibetan, and expeditions to Everest's north side pass right by its slopes.",
   },
@@ -150,6 +163,7 @@ export const himalayaBatch = [
       "A major peak at the tri-junction of India, Nepal and China, the highest point of the Janak Himal section.",
     countries: "IN, NP, CN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Jongsong Peak sits at one of the few points in the world where three countries' borders meet on a summit ridge.",
   },
@@ -161,6 +175,7 @@ export const himalayaBatch = [
       "The highest peak of the Langtang Himal in central Nepal, a compact mountain within a day's drive of Kathmandu.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Langtang Lirung towers over the Langtang Valley, which was devastated by avalanches during the 2015 Nepal earthquake.",
   },
@@ -172,6 +187,7 @@ export const himalayaBatch = [
       "The highest peak of the Rolwaling Himal in central Nepal, a remote rock-and-ice giant west of Khumbu.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Molamenqing was not climbed until 1992, almost forty years after Everest, because its approaches are so long.",
   },
@@ -183,6 +199,7 @@ export const himalayaBatch = [
       "A dramatic peak on the Nepal-Tibet border just 8 km west of Everest, often used by expeditions as an acclimatization climb.",
     countries: "NP, CN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "George Mallory named Pumori, which means 'Unmarried Daughter' — he described it as a daughter of Everest.",
   },
@@ -194,6 +211,7 @@ export const himalayaBatch = [
       "A symmetrical snow-and-ice peak in the Khumbu region of Nepal, near Makalu Barun National Park.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Baruntse was first climbed in 1954 by members of Edmund Hillary's expedition while exploring the Barun Valley.",
   },
@@ -205,6 +223,7 @@ export const himalayaBatch = [
       "A striking twin-peaked mountain on the Nepal-Tibet border east of Kathmandu, sacred to both Hindus and Buddhists.",
     countries: "NP, CN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Gaurishankar is named after the Hindu god Shiva and his consort Parvati, and climbing it was long considered taboo.",
   },
@@ -216,6 +235,7 @@ export const himalayaBatch = [
       "The highest peak of the Saser Muztagh in the eastern Karakoram, located in the Ladakh region of India.",
     countries: "IN",
     range: "Karakoram",
+    region: "Southern Asia",
     fun_fact:
       "Saser Kangri stands near the ancient Nubra Valley trade route, one of the highest motorable passes in the world.",
   },
@@ -227,6 +247,7 @@ export const himalayaBatch = [
       "The highest peak of the Nun Kun massif in the Zanskar region of India, a classic snow-and-ice mountain.",
     countries: "IN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Nun and its twin Kun rise side by side just 3 km apart, and Nun is the highest summit of Jammu and Kashmir.",
   },
@@ -238,6 +259,7 @@ export const himalayaBatch = [
       "The slightly lower twin of Nun in the Zanskar region of India, a broad snowy dome above a high plateau.",
     countries: "IN",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Kun is a popular introductory 7000 m climb because of its moderate slopes and easy access from the Suru Valley.",
   },
@@ -249,6 +271,7 @@ export const himalayaBatch = [
       "The highest peak of far-western Nepal, a remote giant near the Tibetan border in the Api Himal.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Api's remote region sees fewer visitors than almost any part of the Nepal Himalaya — expeditions often have the mountain entirely to themselves.",
   },
@@ -260,6 +283,7 @@ export const himalayaBatch = [
       "The second-highest peak of far-western Nepal, an elegant pyramid of rock and ice rising above deep forested valleys.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Saipal remained unclimbed from 1963 until a full ascent was finally confirmed decades later — its summit is one of the loneliest in Nepal.",
   },
@@ -271,6 +295,7 @@ export const himalayaBatch = [
       "A striking snow pyramid in the Dhaulagiri region of Nepal, standing above the Kali Gandaki valley.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Tukuche rises directly above the Kali Gandaki Gorge, often called the deepest valley in the world.",
   },
@@ -282,6 +307,7 @@ export const himalayaBatch = [
       "One of the most beautiful mountains in the world, a steep hanging-glacier pyramid in the Khumbu region of Nepal.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Ama Dablam means 'Mother's Necklace' — its hanging glacier resembles the sacred double pendant worn by Sherpa women.",
   },
@@ -293,6 +319,7 @@ export const himalayaBatch = [
       "A sacred twin-summitted pyramid near Pokhara in Nepal, considered the most photogenic mountain in the Annapurna region.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Machhapuchhare means 'Fishtail', and climbing it is forbidden — the mountain has never been summited.",
   },
@@ -304,6 +331,7 @@ export const himalayaBatch = [
       "Nepal's highest trekking peak, a straightforward snow climb in the Hinku valley south of Everest.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "From Mera Peak's summit, five of the world's 8000 m mountains — Everest, Lhotse, Makalu, Cho Oyu and Kangchenjunga — are visible at once.",
   },
@@ -315,6 +343,7 @@ export const himalayaBatch = [
       "A popular trekking peak in the Khumbu region of Nepal, rising like an island in a sea of ice.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Island Peak was named by the 1953 Everest expedition, and Tenzing Norgay and Hillary's team trained on its slopes.",
   },
@@ -326,6 +355,7 @@ export const himalayaBatch = [
       "A steep, narrow peak in the Khumbu region of Nepal, linked to Taboche by a long knife-edge ridge.",
     countries: "NP",
     range: "Himalayas",
+    region: "Southern Asia",
     fun_fact:
       "Cholatse means 'Lake Pass Peak' in Sherpa — it sits beside the pass where climbers cross between the Gokyo and Khumbu valleys.",
   },

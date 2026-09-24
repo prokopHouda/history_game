@@ -59,8 +59,8 @@ describe('gameUi game-specific wording', () => {
     expect(MP_UI.history.en.minValueLabel).toContain('Year');
   });
 
-  it('group labels differ per game', () => {
+  it('group labels use the region taxonomy for both games', () => {
     expect(SP_UI.history.en.groupLabel).toBe('Region');
-    expect(SP_UI.mountains.en.groupLabel).toBe('Range');
+    expect(SP_UI.mountains.en.groupLabel).toBe('Region');
   });
 });

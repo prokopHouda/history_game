@@ -51,10 +51,19 @@ for (const m of all) {
 }
 
 // Field keys check — only allowed keys (skip our internal 'file' tracker)
-const ALLOWED = new Set(['id', 'short_name', 'elevation', 'description', 'countries', 'range', 'fun_fact', 'file']);
+const ALLOWED = new Set(['id', 'short_name', 'elevation', 'description', 'countries', 'range', 'region', 'fun_fact', 'file']);
 for (const m of all) {
   for (const k of Object.keys(m)) {
     if (!ALLOWED.has(k)) { console.error(`UNKNOWN field "${k}" in id=${m.id} (${m.short_name}) file=${m.file}`); errors++; }
+  }
+}
+
+// Region taxonomy check: every region must be a known UN M49 sub-region
+const { SUBREGION_TO_CONTINENT } = await import('../lib/regions.js');
+for (const m of all) {
+  if (!m.region) { console.error(`MISSING region: id=${m.id} (${m.short_name})`); errors++; continue; }
+  if (!SUBREGION_TO_CONTINENT[m.region]) {
+    console.error(`UNKNOWN region "${m.region}" on id=${m.id} (${m.short_name}) in ${m.file}`); errors++;
   }
 }
 

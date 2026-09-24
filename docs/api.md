@@ -44,7 +44,7 @@ Create a new multiplayer room. Host is automatically added to the `players` arra
   "filters": {
     "minElevation": 2000,
     "maxElevation": 8849,
-    "range": "Alps",
+    "region": "Europe",
     "country": "CH"
   },
   "nickname": "Alice",
@@ -52,7 +52,7 @@ Create a new multiplayer room. Host is automatically added to the `players` arra
 }
 ```
 
-Filter keys are game-specific (see `lib/games.js` → `mechanics.filters`); the API ignores keys that don't belong to the room's game.
+Filter keys are game-specific (see `lib/games.js` → `mechanics.filters`); the API ignores keys that don't belong to the room's game. Both games use the same UN M49 `region` taxonomy; the country filter always takes an ISO-2 code (the UI displays localized country names).
 
 **Response:**
 ```json

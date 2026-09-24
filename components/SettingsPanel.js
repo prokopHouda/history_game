@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { filterEvents, getUniqueGroupsAndCountries, getPoolCountriesString } from '../lib/filters.js';
+import { getCountryName, sortCountriesByLocalizedName } from '../lib/countries.js';
 import RegionSelect from './RegionSelect.js';
 import CountryFlags from './CountryFlags.js';
 
@@ -15,6 +16,11 @@ export default function SettingsPanel({ allEvents, lang, t, tf, game, MIN_EVENTS
   const { groups, countries } = useMemo(
     () => getUniqueGroupsAndCountries(allEvents, game.key),
     [allEvents, game.key]
+  );
+
+  const sortedCountries = useMemo(
+    () => sortCountriesByLocalizedName(countries, lang),
+    [countries, lang]
   );
 
   const filters = useMemo(() => ({
@@ -106,8 +112,8 @@ export default function SettingsPanel({ allEvents, lang, t, tf, game, MIN_EVENTS
         <label htmlFor="countryFilter">{t('country')}</label>
         <select id="countryFilter" value={country} onChange={(e) => updateCountry(e.target.value)}>
           <option value="">{t('allCountries')}</option>
-          {countries.map((c) => (
-            <option key={c} value={c}>{c}</option>
+          {sortedCountries.map((c) => (
+            <option key={c} value={c}>{getCountryName(c, lang)}</option>
           ))}
         </select>
       </div>

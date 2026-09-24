@@ -15,6 +15,7 @@ const HOME_UI = {
     back: '← Back',
     historyDesc: 'Which event happened earlier?',
     mountainsDesc: 'Which mountain is higher?',
+    riversDesc: 'Which river is longer?',
     players: 'players',
     builtWith: 'Built with real-time rooms and worldwide data',
   },
@@ -30,6 +31,7 @@ const HOME_UI = {
     back: '← Zpět',
     historyDesc: 'Která událost se stala dříve?',
     mountainsDesc: 'Která hora je vyšší?',
+    riversDesc: 'Která řeka je delší?',
     players: 'hráčů',
     builtWith: 'Postaveno s místnostmi v reálném čase a daty z celého světa',
   },
@@ -45,6 +47,7 @@ const HOME_UI = {
     back: '← Indietro',
     historyDesc: 'Quale evento è avvenuto prima?',
     mountainsDesc: 'Quale montagna è più alta?',
+    riversDesc: 'Quale fiume è più lungo?',
     players: 'giocatori',
     builtWith: 'Costruito con stanze in tempo reale e dati da tutto il mondo',
   },
@@ -60,6 +63,11 @@ const GAMES_META = [
     key: 'mountains',
     icon: '🏔️',
     name: { en: 'Mountains', cs: 'Hory', it: 'Montagne' },
+  },
+  {
+    key: 'rivers',
+    icon: '💧',
+    name: { en: 'Rivers', cs: 'Řeky', it: 'Fiumi' },
   },
 ];
 

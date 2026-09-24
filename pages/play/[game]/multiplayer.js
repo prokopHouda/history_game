@@ -10,6 +10,7 @@ export async function getStaticPaths() {
     paths: [
       { params: { game: 'history' } },
       { params: { game: 'mountains' } },
+      { params: { game: 'rivers' } },
     ],
     fallback: false,
   };

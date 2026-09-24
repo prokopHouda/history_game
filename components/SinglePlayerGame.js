@@ -343,16 +343,17 @@ export default function SinglePlayerGame({ game: gameKey }) {
       {celebration !== null && (
         <div className="celebration-overlay">
           <div className="celebration-badge">
-            {MILESTONES[celebration] ? (
+            {MILESTONES[game.key] && MILESTONES[game.key][celebration] ? (
               <>
                 <div style={{ fontSize: '0.45em', marginBottom: '0.2em', opacity: 0.9 }}>
-                  {MILESTONES[celebration].badge} {MILESTONES[celebration].name}
+                  {MILESTONES[game.key][celebration].badge} {MILESTONES[game.key][celebration].name}
                 </div>
                 🔥 {t('streak').toUpperCase()} {celebration} 🔥
               </>
             ) : (
-              `🔥 ${t('streak').toUpperCase()} ${celebration} 🔥`
+              `🔥 ${t('streak').toUpperCase()} {celebration} 🔥`
             )}
+
           </div>
         </div>
       )}

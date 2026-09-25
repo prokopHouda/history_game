@@ -1,40 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Higher or Lower Games
+
+A multi-game quiz platform built with [Next.js](https://nextjs.org). Players pick between two things — which one is "lower" or "higher" — across different games, in single-player or real-time multiplayer.
+
+| Game | Question | Dataset |
+|------|----------|---------|
+| 🏛️ **History** | Which event happened earlier? | ~200 historical events |
+| 🏔️ **Mountains** | Which mountain is higher? | ~206 world peaks |
+| 💧 **Rivers** | Which river is longer? | ~200 world rivers |
+
+## Features
+
+- **Homescreen** — pick single/multiplayer, then pick a game
+- **Single-player mode** — solo streaks with ranks and milestones (win at streak 50)
+- **Multiplayer mode** — real-time matches with lobby, room codes, and live scoring (2–10 players)
+- **Live updates** — powered by Supabase Realtime
+- **Language support** — English, Czech, Italian (extensible via DeepL)
+- **Fun facts** — learn something new after each round
+- **Per-game filters** — year/region/country (history), elevation/region/country (mountains), length/region/country (rivers)
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Start development server (needs .env.local with public Supabase keys)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+```bash
+npm run lint       # eslint
+npm run test:run   # vitest unit tests
+npm run build      # next build (must have env vars set)
+```
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+## Environment Variables
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+| Variable | Scope |
+|----------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | public |
+| `NEXT_PUBLIC_SUPABASE_KEY` | public (anon key) |
+| `SUPABASE_SERVICE_ROLE_KEY` | **secret** — server-side only |
+| `DEEPL_API_KEY` | **secret** — server-side only |
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Never commit secrets. `.env*` is gitignored; the two secret keys live in the Vercel dashboard.
 
-## Learn More
+## Documentation
 
-To learn more about Next.js, take a look at the following resources:
+- [docs/architecture.md](./docs/architecture.md) — system architecture, data flows, database schema, game registry
+- [docs/api.md](./docs/api.md) — API endpoints, request/response formats
+- [AGENTS.md](./AGENTS.md) — conventions for AI agents working on this repo
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Production deploys automatically on every push to `main` via [Vercel](https://vercel.com).
 
-## Deploy on Vercel
+## Adding a New Game
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+1. Add an entry to `GAMES` in `lib/games.js` (mechanics + data tables + filter keys)
+2. Add `SP_UI.<key>` and `MP_UI.<key>` dictionaries in `lib/gameUi.js` (all langs, same keys)
+3. Create the data + translations tables in Supabase (mirror `database/18_create_rivers.sql`)
+4. Add the game to `getStaticPaths` in both `pages/play/[game]/` routes and to `GAMES_META` in `pages/index.js`
+5. Seed data via a batch file + `scripts/seed-rivers.js`-style script (or extend it)

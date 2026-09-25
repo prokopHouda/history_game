@@ -19,6 +19,7 @@ Welcome to the **Higher or Lower Games** documentation! This folder contains all
 |------|----------|---------|
 | **History** | Which event happened earlier? | ~200 historical events |
 | **Mountains** | Which mountain is higher? | ~206 world peaks |
+| **Rivers** | Which river is longer? | ~200 world rivers |
 
 New games are added by creating one entry in the game registry (`lib/games.js`) plus one data table — all pages, APIs and components are shared.
 
@@ -31,7 +32,7 @@ New games are added by creating one entry in the game registry (`lib/games.js`) 
 - **Language support** — English, Czech, Italian (extensible via DeepL)
 - **Fun facts** — learn something new after each round
 - **Disconnect detection** — server-side heartbeats detect player dropouts
-- **Per-game filters** — year/region/country for history, elevation/range/country for mountains
+- **Per-game filters** — year/region/country for history, elevation/region/country for mountains, length/region/country for rivers
 
 ## Quick Start
 

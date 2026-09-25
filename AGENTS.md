@@ -2,7 +2,7 @@
 
 ## Project overview
 - **Stack**: Next.js 16 (Pages Router), React 19, Supabase JS client, DeepL translation API
-- **Multi-game quiz platform**: pick between two things — earlier (history) or higher (mountains) — single-player or real-time multiplayer
+- **Multi-game quiz platform**: pick between two things — earlier (history), higher (mountains) or longer (rivers) — single-player or real-time multiplayer
 - **Game registry**: `lib/games.js` describes every game (mechanics, tables, filters); pages/components/APIs are shared and game-agnostic
 - **Deployed on Vercel** with connected GitHub repo `prokopHouda/history_game`
 - **Local source folder**: `C:\Users\proko\Documents\GitHub\history_game`
@@ -34,23 +34,25 @@
   - `updated_at` auto-updates on row change (trigger) — available for future cache TTL logic
 - **`mountains` table**: `id, short_name, elevation (int), description, countries, range, region, fun_fact` — mirrors `events` (migrations `database/15_create_mountains.sql`, `database/17_add_mountains_region.sql`; RLS: public read on `mountains`, translations service-only). `region` uses the same UN M49 sub-regions as `events.region`; `range` (mountain range) is kept as data but no longer a filter.
 - **`mountain_translations` table**: `mountain_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
+- **`rivers` table**: `id, short_name, length (int, km), description, countries, region, fun_fact` — mirrors `events`/`mountains` (migration `database/18_create_rivers.sql`; RLS: public read on `rivers`, translations service-only). `region` uses the same UN M49 sub-regions.
+- **`river_translations` table**: `river_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
 - **`rooms` table** (multiplayer): `id, code, game, host, state, events (pool JSONB), current_pair, scores, streaks, current_round, answered, winner, shown_pairs, heartbeats, created_at/updated_at`
-  - `game`: `'history'` (default) or `'mountains'` — set at create, read by turn/translate logic
+  - `game`: `'history'` (default), `'mountains'` or `'rivers'` — set at create, read by turn/translate logic
   - Migrations: `database/00_create_rooms.sql`, `database/16_add_rooms_game.sql` — run manually in Supabase SQL Editor
   - `shown_pairs`: JSONB array of canonical pair keys (`"a-b"`) preventing repeat questions
   - `heartbeats`: JSONB tracking last-seen timestamps per player for disconnect detection
   - Realtime enabled via: `alter publication supabase_realtime add table rooms;`
 
 ## Game mechanics config (`lib/games.js`)
-| | history | mountains |
-|---|---|---|
-| Question | Which happened earlier? | Which is higher? |
-| Winner | lower `getComparable` | higher `getComparable` |
-| minGap (never paired) | 2 years | 50 m |
-| easyGap (+1 / +2 below) | 100 years | 500 m |
-| gapScale (weight decay) | 50 | 500 |
-| Filter keys | `startYear`/`endYear`, `region`, `country` | `minElevation`/`maxElevation`, `region`, `country` |
-| UI dicts | `SP_UI.history` / `MP_UI.history` in `lib/gameUi.js` | `SP_UI.mountains` / `MP_UI.mountains` |
+| | history | mountains | rivers |
+|---|---|---|---|
+| Question | Which happened earlier? | Which is higher? | Which is longer? |
+| Winner | lower `getComparable` | higher `getComparable` | higher `getComparable` |
+| minGap (never paired) | 2 years | 50 m | 10 km |
+| easyGap (+1 / +2 below) | 100 years | 500 m | 100 km |
+| gapScale (weight decay) | 50 | 500 | 500 |
+| Filter keys | `startYear`/`endYear`, `region`, `country` | `minElevation`/`maxElevation`, `region`, `country` | `minLength`/`maxLength`, `region`, `country` |
+| UI dicts | `SP_UI.history` / `MP_UI.history` in `lib/gameUi.js` | `SP_UI.mountains` / `MP_UI.mountains` | `SP_UI.rivers` / `MP_UI.rivers` |
 
 ## Environment variables
 | Variable | Scope | Notes |
@@ -64,7 +66,7 @@
 
 ## Translation flow
 1. Game UI requests `/api/translate?ids=...&lang=...&game=...`
-2. API checks the game's translations table cache first (`event_translations` / `mountain_translations`)
+2. API checks the game's translations table cache first (`event_translations` / `mountain_translations` / `river_translations`)
 3. Missing texts are sent to DeepL (`api-free.deepl.com`), translated from EN → target
 4. New translations are **upserted back** into the game's translations table
 5. Graceful fallback to English if DeepL fails or key is missing
@@ -95,6 +97,6 @@ Per-game UI dictionaries live in `lib/gameUi.js` (`SP_UI`, `MP_UI` — key parit
 ## Important conventions
 - **Never** commit secrets. `.env*` is gitignored. Only public keys in `.env.local`.
 - Single-player and multiplayer engines live in `components/SinglePlayerGame.js` / `components/MultiplayerGame.js` and are game-agnostic. Multiplayer uses `useRef` for flow-control variables and `useEffect` for realtime subscriptions, heartbeat intervals, and turn timers.
-- The `events` and `event_translations` tables are managed in Supabase dashboard; seed scripts for new data live in `scripts/` (events-data / mountains-data batch files).
+- The `events` and `event_translations` tables are managed in Supabase dashboard; seed scripts for new data live in `scripts/` (events-data / mountains-data / rivers-data batch files).
 - Wire keys `earlier`/`later` in `/api/turn` responses mean "correct answer"/"wrong answer" regardless of game direction — kept for compatibility.
 

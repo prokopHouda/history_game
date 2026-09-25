@@ -4,7 +4,7 @@ Base URL: `https://history-game.vercel.app/api` *(update with your actual deploy
 
 ## Game parameter
 
-Most endpoints are **game-aware**. Pass `"game": "history"` or `"game": "mountains"` (defaults to `"history"`), or for `/api/translate` the query param `&game=`. Rooms store their game at creation and all turn/translate logic reads it back from the room row.
+Most endpoints are **game-aware**. Pass `"game": "history"`, `"game": "mountains"` or `"game": "rivers"` (defaults to `"history"`), or for `/api/translate` the query param `&game=`. Rooms store their game at creation and all turn/translate logic reads it back from the room row.
 
 ---
 
@@ -52,7 +52,25 @@ Create a new multiplayer room. Host is automatically added to the `players` arra
 }
 ```
 
-Filter keys are game-specific (see `lib/games.js` → `mechanics.filters`); the API ignores keys that don't belong to the room's game. Both games use the same UN M49 `region` taxonomy; the country filter always takes an ISO-2 code (the UI displays localized country names).
+**Request body (rivers):**
+```json
+{
+  "action": "create",
+  "playerId": "abc123",
+  "game": "rivers",
+  "total_rounds": 10,
+  "filters": {
+    "minLength": 1000,
+    "maxLength": 6650,
+    "region": "Europe",
+    "country": "DE"
+  },
+  "nickname": "Alice",
+  "color": "#ef4444"
+}
+```
+
+Filter keys are game-specific (see `lib/games.js` → `mechanics.filters`); the API ignores keys that don't belong to the room's game. All games use the same UN M49 `region` taxonomy; the country filter always takes an ISO-2 code (the UI displays localized country names).
 
 **Response:**
 ```json
@@ -265,11 +283,11 @@ Check whether other players are still alive. If the host is disconnected in lobb
 
 ## `/api/turn`
 
-Handles player answer submission and scoring. Comparison direction and point thresholds come from the room's game: history = earlier wins (+1 at gap ≥ 100 years), mountains = higher wins (+1 at gap ≥ 500 m).
+Handles player answer submission and scoring. Comparison direction and point thresholds come from the room's game: history = earlier wins (+1 at gap ≥ 100 years), mountains = higher wins (+1 at gap ≥ 500 m), rivers = longer wins (+1 at gap ≥ 100 km).
 
 ### `POST /api/turn` — Submit Answer
 
-Submit which item the player thinks is correct (earlier event / higher mountain).
+Submit which item the player thinks is correct (earlier event / higher mountain / longer river).
 
 **Request body:**
 ```json
@@ -308,7 +326,7 @@ Submit which item the player thinks is correct (earlier event / higher mountain)
 }
 ```
 
-Note: the `earlier`/`later` keys mean "the correct answer" / "the wrong one" — for mountains rooms they carry the higher/lower peak. The key names are kept for wire compatibility.
+Note: the `earlier`/`later` keys mean "the correct answer" / "the wrong one" — for mountains rooms they carry the higher/lower peak, for rivers rooms the longer/shorter river. The key names are kept for wire compatibility.
 
 **Server-side deadline:** If 45 seconds pass since `round_started_at` and not all active players have answered, the server auto-marks missing players as `timedOut` (0 points) and advances the round.
 
@@ -351,9 +369,9 @@ DeepL translation proxy with Supabase caching. Translates from the game's data t
 Request translations for a batch of item IDs.
 
 **Query params:**
-- `ids` — comma-separated item ids (events for `history`, mountains for `mountains`)
+- `ids` — comma-separated item ids (events for `history`, mountains for `mountains`, rivers for `rivers`)
 - `lang` — target language (`cs`, `it`; `en` returns empty)
-- `game` — `history` (default) or `mountains`; selects `events`/`event_translations` or `mountains`/`mountain_translations`
+- `game` — `history` (default), `mountains` or `rivers`; selects `events`/`event_translations`, `mountains`/`mountain_translations` or `rivers`/`river_translations`
 
 **Example:**
 ```

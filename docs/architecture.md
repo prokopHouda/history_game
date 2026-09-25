@@ -429,13 +429,14 @@ scripts/
 tests/
 └── lib/
     ├── games.test.js        # registry, pickWinner, valueGap, pointsForGap (15 tests)
-    ├── gameUi.test.js       # key parity across all dicts + game wording (21 tests)
+    ├── gameUi.test.js       # key parity across all dicts + game wording (31 tests)
     ├── eventTime.test.js    # getEventYear / getEventTime (14 tests)
-    ├── filters.test.js      # filterEvents / groups / countries, history + mountains (31 tests)
+    ├── filters.test.js      # filterEvents / groups / countries, history + mountains (33 tests)
     ├── pickPair.test.js     # canonicalKey / pickPair, history + mountains (18 tests)
-    ├── milestones.test.js   # MILESTONES / getMilestone / getNextMilestone (14 tests)
+    ├── milestones.test.js   # MILESTONES / getMilestone / getNextMilestone per game (16 tests)
     ├── i18n.test.js         # baseUiText / makeT (10 tests)
     ├── onCardKey.test.js    # keyboard handler (5 tests)
+    ├── countries.test.js    # localized country names via Intl.DisplayNames (9 tests)
     ├── regions.test.js      # continent/region taxonomy (6 tests)
     └── translate.test.js    # ensureTranslated / getText incl. game param (15 tests)
 database/
@@ -477,7 +478,7 @@ flowchart LR
 
 ## Testing
 
-The project uses **Vitest** with **jsdom** for unit testing. Tests cover all 10 `lib/` files (149 tests total), including game-specific behaviour for history, mountains and rivers.
+The project uses **Vitest** with **jsdom** for unit testing. Tests cover all `lib/` files (172 tests total), including game-specific behaviour for history, mountains and rivers.
 
 ### Running tests
 

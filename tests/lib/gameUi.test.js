@@ -3,7 +3,7 @@ import { SP_UI, MP_UI } from '../../lib/gameUi.js';
 import { baseUiText } from '../../lib/i18n.js';
 
 const LANGS = ['en', 'cs', 'it'];
-const GAMES = ['history', 'mountains'];
+const GAMES = ['history', 'mountains', 'rivers'];
 
 describe('gameUi key parity', () => {
   for (const [name, dict] of [['SP_UI', SP_UI], ['MP_UI', MP_UI]]) {
@@ -48,19 +48,30 @@ describe('gameUi game-specific wording', () => {
     expect(SP_UI.mountains.en.title).toBe('Which mountain is higher?');
   });
 
+  it('rivers SP title asks about longer rivers', () => {
+    expect(SP_UI.rivers.en.title).toBe('Which river is longer?');
+  });
+
   it('mountains distance text uses metres', () => {
     expect(SP_UI.mountains.en.yearsApart).toContain('m apart');
   });
 
-  it('filter labels are elevation-based for mountains, year-based for history', () => {
-    expect(SP_UI.mountains.en.minValueLabel).toContain('Elevation');
-    expect(SP_UI.history.en.minValueLabel).toContain('Year');
-    expect(MP_UI.mountains.en.minValueLabel).toContain('Elevation');
-    expect(MP_UI.history.en.minValueLabel).toContain('Year');
+  it('rivers distance text uses kilometres', () => {
+    expect(SP_UI.rivers.en.yearsApart).toContain('km apart');
   });
 
-  it('group labels use the region taxonomy for both games', () => {
+  it('filter labels are elevation-based for mountains, year-based for history, length-based for rivers', () => {
+    expect(SP_UI.mountains.en.minValueLabel).toContain('Elevation');
+    expect(SP_UI.history.en.minValueLabel).toContain('Year');
+    expect(SP_UI.rivers.en.minValueLabel).toContain('Length');
+    expect(MP_UI.mountains.en.minValueLabel).toContain('Elevation');
+    expect(MP_UI.history.en.minValueLabel).toContain('Year');
+    expect(MP_UI.rivers.en.minValueLabel).toContain('Length');
+  });
+
+  it('group labels use the region taxonomy for all games', () => {
     expect(SP_UI.history.en.groupLabel).toBe('Region');
     expect(SP_UI.mountains.en.groupLabel).toBe('Region');
+    expect(SP_UI.rivers.en.groupLabel).toBe('Region');
   });
 });

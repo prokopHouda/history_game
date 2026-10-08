@@ -3,7 +3,7 @@ import { SP_UI, MP_UI } from '../../lib/gameUi.js';
 import { baseUiText } from '../../lib/i18n.js';
 
 const LANGS = ['en', 'cs', 'it'];
-const GAMES = ['history', 'mountains', 'rivers'];
+const GAMES = ['history', 'mountains', 'rivers', 'sportclubs'];
 
 describe('gameUi key parity', () => {
   for (const [name, dict] of [['SP_UI', SP_UI], ['MP_UI', MP_UI]]) {
@@ -60,18 +60,29 @@ describe('gameUi game-specific wording', () => {
     expect(SP_UI.rivers.en.yearsApart).toContain('km apart');
   });
 
-  it('filter labels are elevation-based for mountains, year-based for history, length-based for rivers', () => {
+  it('sportclubs SP title asks about older clubs', () => {
+    expect(SP_UI.sportclubs.en.title).toBe('Which club is older?');
+  });
+
+  it('sportclubs distance text uses years', () => {
+    expect(SP_UI.sportclubs.en.yearsApart).toContain('years apart');
+  });
+
+  it('filter labels are elevation-based for mountains, year-based for history, length-based for rivers, founding-based for sportclubs', () => {
     expect(SP_UI.mountains.en.minValueLabel).toContain('Elevation');
     expect(SP_UI.history.en.minValueLabel).toContain('Year');
     expect(SP_UI.rivers.en.minValueLabel).toContain('Length');
+    expect(SP_UI.sportclubs.en.minValueLabel).toContain('Founded');
     expect(MP_UI.mountains.en.minValueLabel).toContain('Elevation');
     expect(MP_UI.history.en.minValueLabel).toContain('Year');
     expect(MP_UI.rivers.en.minValueLabel).toContain('Length');
+    expect(MP_UI.sportclubs.en.minValueLabel).toContain('Founded');
   });
 
   it('group labels use the region taxonomy for all games', () => {
     expect(SP_UI.history.en.groupLabel).toBe('Region');
     expect(SP_UI.mountains.en.groupLabel).toBe('Region');
     expect(SP_UI.rivers.en.groupLabel).toBe('Region');
+    expect(SP_UI.sportclubs.en.groupLabel).toBe('Region');
   });
 });

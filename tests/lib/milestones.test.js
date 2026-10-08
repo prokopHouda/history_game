@@ -5,8 +5,8 @@ const LEVELS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 const GAMES = Object.keys(MILESTONES);
 
 describe('MILESTONES', () => {
-  it('defines milestones for history, mountains and rivers', () => {
-    expect(GAMES.sort()).toEqual(['history', 'mountains', 'rivers']);
+  it('defines milestones for history, mountains, rivers and sportclubs', () => {
+    expect(GAMES.sort()).toEqual(['history', 'mountains', 'rivers', 'sportclubs']);
   });
 
   it.each(GAMES)('%s: has entries from 5 to 50 in steps of 5', (gk) => {

@@ -2,7 +2,7 @@
 
 ## Project overview
 - **Stack**: Next.js 16 (Pages Router), React 19, Supabase JS client, DeepL translation API
-- **Multi-game quiz platform**: pick between two things — earlier (history), higher (mountains) or longer (rivers) — single-player or real-time multiplayer
+- **Multi-game quiz platform**: pick between two things — earlier (history), higher (mountains), longer (rivers) or older (sport clubs) — single-player or real-time multiplayer
 - **Game registry**: `lib/games.js` describes every game (mechanics, tables, filters); pages/components/APIs are shared and game-agnostic
 - **Deployed on Vercel** with connected GitHub repo `prokopHouda/history_game`
 - **Local source folder**: `C:\Users\proko\Documents\GitHub\history_game`
@@ -36,23 +36,25 @@
 - **`mountain_translations` table**: `mountain_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
 - **`rivers` table**: `id, short_name, length (int, km), description, countries, region, fun_fact` — mirrors `events`/`mountains` (migration `database/18_create_rivers.sql`; RLS: public read on `rivers`, translations service-only). `region` uses the same UN M49 sub-regions.
 - **`river_translations` table**: `river_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
+- **`sport_clubs` table**: `id, short_name, founded (int, year), description, countries, sport, region, fun_fact` — mirrors `events`/`mountains`/`rivers` (migration `database/19_create_sport_clubs.sql`; RLS: public read on `sport_clubs`, translations service-only). `region` uses the same UN M49 sub-regions; `sport` is kept as data (e.g. "football", "basketball") but not a filter.
+- **`sport_club_translations` table**: `club_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
 - **`rooms` table** (multiplayer): `id, code, game, host, state, events (pool JSONB), current_pair, scores, streaks, current_round, answered, winner, shown_pairs, heartbeats, created_at/updated_at`
-  - `game`: `'history'` (default), `'mountains'` or `'rivers'` — set at create, read by turn/translate logic
+  - `game`: `'history'` (default), `'mountains'`, `'rivers'` or `'sportclubs'` — set at create, read by turn/translate logic
   - Migrations: `database/00_create_rooms.sql`, `database/16_add_rooms_game.sql` — run manually in Supabase SQL Editor
   - `shown_pairs`: JSONB array of canonical pair keys (`"a-b"`) preventing repeat questions
   - `heartbeats`: JSONB tracking last-seen timestamps per player for disconnect detection
   - Realtime enabled via: `alter publication supabase_realtime add table rooms;`
 
 ## Game mechanics config (`lib/games.js`)
-| | history | mountains | rivers |
+| | history | mountains | rivers | sport clubs |
 |---|---|---|---|
-| Question | Which happened earlier? | Which is higher? | Which is longer? |
-| Winner | lower `getComparable` | higher `getComparable` | higher `getComparable` |
-| minGap (never paired) | 2 years | 50 m | 10 km |
-| easyGap (+1 / +2 below) | 100 years | 500 m | 100 km |
-| gapScale (weight decay) | 50 | 500 | 500 |
-| Filter keys | `startYear`/`endYear`, `region`, `country` | `minElevation`/`maxElevation`, `region`, `country` | `minLength`/`maxLength`, `region`, `country` |
-| UI dicts | `SP_UI.history` / `MP_UI.history` in `lib/gameUi.js` | `SP_UI.mountains` / `MP_UI.mountains` | `SP_UI.rivers` / `MP_UI.rivers` |
+| Question | Which happened earlier? | Which is higher? | Which is longer? | Which club is older? |
+| Winner | lower `getComparable` | higher `getComparable` | higher `getComparable` | lower `getComparable` |
+| minGap (never paired) | 2 years | 50 m | 10 km | 2 years |
+| easyGap (+1 / +2 below) | 100 years | 500 m | 100 km | 25 years |
+| gapScale (weight decay) | 50 | 500 | 500 | 15 |
+| Filter keys | `startYear`/`endYear`, `region`, `country` | `minElevation`/`maxElevation`, `region`, `country` | `minLength`/`maxLength`, `region`, `country` | `minFounded`/`maxFounded`, `region`, `country` |
+| UI dicts | `SP_UI.history` / `MP_UI.history` in `lib/gameUi.js` | `SP_UI.mountains` / `MP_UI.mountains` | `SP_UI.rivers` / `MP_UI.rivers` | `SP_UI.sportclubs` / `MP_UI.sportclubs` |
 
 ## Environment variables
 | Variable | Scope | Notes |

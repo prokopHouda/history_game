@@ -7,6 +7,7 @@ A multi-game quiz platform built with [Next.js](https://nextjs.org). Players pic
 | 🏛️ **History** | Which event happened earlier? | ~200 historical events |
 | 🏔️ **Mountains** | Which mountain is higher? | ~206 world peaks |
 | 💧 **Rivers** | Which river is longer? | ~200 world rivers |
+| ⚽ **Sport Clubs** | Which club is older? | ~100 sport clubs (football, basketball, hockey…) |
 
 ## Features
 
@@ -16,7 +17,7 @@ A multi-game quiz platform built with [Next.js](https://nextjs.org). Players pic
 - **Live updates** — powered by Supabase Realtime
 - **Language support** — English, Czech, Italian (extensible via DeepL)
 - **Fun facts** — learn something new after each round
-- **Per-game filters** — year/region/country (history), elevation/region/country (mountains), length/region/country (rivers)
+- **Per-game filters** — year/region/country (history), elevation/region/country (mountains), length/region/country (rivers), founding year/region/country (sport clubs)
 
 ## Getting Started
 
@@ -61,6 +62,6 @@ Production deploys automatically on every push to `main` via [Vercel](https://ve
 
 1. Add an entry to `GAMES` in `lib/games.js` (mechanics + data tables + filter keys)
 2. Add `SP_UI.<key>` and `MP_UI.<key>` dictionaries in `lib/gameUi.js` (all langs, same keys)
-3. Create the data + translations tables in Supabase (mirror `database/18_create_rivers.sql`)
+3. Create the data + translations tables in Supabase (mirror `database/18_create_rivers.sql` or `database/19_create_sport_clubs.sql`)
 4. Add the game to `getStaticPaths` in both `pages/play/[game]/` routes and to `GAMES_META` in `pages/index.js`
 5. Seed data via a batch file + `scripts/seed-rivers.js`-style script (or extend it)

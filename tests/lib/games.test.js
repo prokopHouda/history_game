@@ -107,6 +107,26 @@ describe('registry data config', () => {
       expect(game.mechanics.filters.range.minKey).toBeTruthy();
       expect(game.mechanics.filters.range.maxKey).toBeTruthy();
       expect(game.mechanics.filters.group.column).toBeTruthy();
+      expect(typeof game.mechanics.valueLabel).toBe('function');
     });
+  });
+});
+
+describe('pickWinner — sportclubs game', () => {
+  it('picks the older club', () => {
+    const a = { id: 1, founded_year: 1899 };
+    const b = { id: 2, founded_year: 1905 };
+    expect(pickWinner(getGame('sportclubs'), a, b).id).toBe(1);
+    expect(pickWinner(getGame('sportclubs'), b, a).id).toBe(1);
+  });
+});
+
+describe('getGame — sportclubs', () => {
+  it('returns sportclubs config for "sportclubs"', () => {
+    expect(getGame('sportclubs').key).toBe('sportclubs');
+  });
+
+  it('lowerWins for sportclubs', () => {
+    expect(lowerWins(getGame('sportclubs'))).toBe(true);
   });
 });

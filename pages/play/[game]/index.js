@@ -7,7 +7,7 @@ export default function PlayGamePage({ game }) {
 
 export async function getStaticPaths() {
   return {
-    paths: [{ params: { game: 'history' } }, { params: { game: 'mountains' } }, { params: { game: 'rivers' } }],
+    paths: [{ params: { game: 'history' } }, { params: { game: 'mountains' } }, { params: { game: 'rivers' } }, { params: { game: 'sportclubs' } }],
     fallback: false,
   };
 }

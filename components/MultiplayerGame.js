@@ -583,12 +583,12 @@ export default function MultiplayerGame({ game: gameKey }) {
       earlierText,
       pairTextA: {
         short_name: ta.short_name,
-        valueLabel: game.key === 'history' ? (a.date || a.year) : (a.elevation ? `${a.elevation} m` : ''),
+        valueLabel: game.mechanics.valueLabel(a),
         countries: a.countries,
       },
       pairTextB: {
         short_name: tb.short_name,
-        valueLabel: game.key === 'history' ? (b.date || b.year) : (b.elevation ? `${b.elevation} m` : ''),
+        valueLabel: game.mechanics.valueLabel(b),
         countries: b.countries,
       },
       funFactText,

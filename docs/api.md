@@ -4,7 +4,7 @@ Base URL: `https://history-game.vercel.app/api` *(update with your actual deploy
 
 ## Game parameter
 
-Most endpoints are **game-aware**. Pass `"game": "history"`, `"game": "mountains"` or `"game": "rivers"` (defaults to `"history"`), or for `/api/translate` the query param `&game=`. Rooms store their game at creation and all turn/translate logic reads it back from the room row.
+Most endpoints are **game-aware**. Pass `"game": "history"`, `"game": "mountains"`, `"game": "rivers"` or `"game": "sportclubs"` (defaults to `"history"`), or for `/api/translate` the query param `&game=`. Rooms store their game at creation and all turn/translate logic reads it back from the room row.
 
 ---
 
@@ -283,7 +283,7 @@ Check whether other players are still alive. If the host is disconnected in lobb
 
 ## `/api/turn`
 
-Handles player answer submission and scoring. Comparison direction and point thresholds come from the room's game: history = earlier wins (+1 at gap ≥ 100 years), mountains = higher wins (+1 at gap ≥ 500 m), rivers = longer wins (+1 at gap ≥ 100 km).
+Handles player answer submission and scoring. Comparison direction and point thresholds come from the room's game: history = earlier wins (+1 at gap ≥ 100 years), mountains = higher wins (+1 at gap ≥ 500 m), rivers = longer wins (+1 at gap ≥ 100 km), sportclubs = older wins (+1 at gap ≥ 25 years).
 
 ### `POST /api/turn` — Submit Answer
 
@@ -369,9 +369,9 @@ DeepL translation proxy with Supabase caching. Translates from the game's data t
 Request translations for a batch of item IDs.
 
 **Query params:**
-- `ids` — comma-separated item ids (events for `history`, mountains for `mountains`, rivers for `rivers`)
+- `ids` — comma-separated item ids (events for `history`, mountains for `mountains`, rivers for `rivers`, sport clubs for `sportclubs`)
 - `lang` — target language (`cs`, `it`; `en` returns empty)
-- `game` — `history` (default), `mountains` or `rivers`; selects `events`/`event_translations`, `mountains`/`mountain_translations` or `rivers`/`river_translations`
+- `game` — `history` (default), `mountains`, `rivers` or `sportclubs`; selects `events`/`event_translations`, `mountains`/`mountain_translations`, `rivers`/`river_translations` or `sport_clubs`/`sport_club_translations`
 
 **Example:**
 ```

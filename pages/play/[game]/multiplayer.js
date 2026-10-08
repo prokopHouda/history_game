@@ -11,6 +11,7 @@ export async function getStaticPaths() {
       { params: { game: 'history' } },
       { params: { game: 'mountains' } },
       { params: { game: 'rivers' } },
+      { params: { game: 'sportclubs' } },
     ],
     fallback: false,
   };

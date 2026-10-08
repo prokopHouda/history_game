@@ -19,7 +19,7 @@ flowchart TB
     end
 
     subgraph Supabase["Supabase"]
-        DB[("PostgreSQL<br/>events / mountains / rivers / rooms")]
+        DB[("PostgreSQL<br/>events / mountains / rivers / sport_clubs / rooms")]
         RL["Realtime (WebSocket)"]
         DB --> RL
     end
@@ -41,21 +41,21 @@ flowchart TB
 
 Every game is fully described by one entry in the `GAMES` registry. All pages, APIs and components read their game-specific behaviour from it — adding a new game means adding one registry entry plus one data table.
 
-| Config | History | Mountains | Rivers | Used by |
-|--------|---------|-----------|-------|---------|
-| `data.table` | `events` | `mountains` | `rivers` | room create, translate, SP/MP data load |
-| `data.translationsTable` | `event_translations` | `mountain_translations` | `river_translations` | `/api/translate` |
-| `data.translationFkColumn` | `event_id` | `mountain_id` | `river_id` | `/api/translate` |
-| `mechanics.getValue` | year | elevation | length (km) | pairing, scoring, filters |
-| `mechanics.getComparable` | date-aware time | elevation | length (km) | winner comparison |
-| `mechanics.direction` | `lower` (earlier wins) | `higher` (taller wins) | `higher` (longer wins) | `pickWinner()` in turn.js |
-| `mechanics.minGap` | 2 years | 50 m | 10 km | pickPair exclusions |
-| `mechanics.gapScale` | 50 | 500 | 500 | proximity weight decay |
-| `mechanics.easyGap` | 100 y → +1 pt | 500 m → +1 pt | 100 km → +1 pt | scoring (+2 below) |
-| `filters.range` | `startYear`/`endYear` | `minElevation`/`maxElevation` | `minLength`/`maxLength` | SettingsPanel, Lobby, room create |
-| `filters.group` | `region` (UN M49, grouped) | `region` (UN M49, grouped) | `region` (UN M49, grouped) | SettingsPanel, Lobby, room create |
+| Config | History | Mountains | Rivers | Sport Clubs | Used by |
+|--------|---------|-----------|-------|------------|---------|
+| `data.table` | `events` | `mountains` | `rivers` | `sport_clubs` | room create, translate, SP/MP data load |
+| `data.translationsTable` | `event_translations` | `mountain_translations` | `river_translations` | `sport_club_translations` | `/api/translate` |
+| `data.translationFkColumn` | `event_id` | `mountain_id` | `river_id` | `club_id` | `/api/translate` |
+| `mechanics.getValue` | year | elevation | length (km) | founded_year | pairing, scoring, filters |
+| `mechanics.getComparable` | date-aware time | elevation | length (km) | founded_year | winner comparison |
+| `mechanics.direction` | `lower` (earlier wins) | `higher` (taller wins) | `higher` (longer wins) | `lower` (older wins) | pickWinner() in turn.js |
+| `mechanics.minGap` | 2 years | 50 m | 10 km | 2 years | pickPair exclusions |
+| `mechanics.gapScale` | 50 | 500 | 500 | 15 | proximity weight decay |
+| `mechanics.easyGap` | 100 y → +1 pt | 500 m → +1 pt | 100 km → +1 pt | 25 y → +1 pt | scoring (+2 below) |
+| `filters.range` | `startYear`/`endYear` | `minElevation`/`maxElevation` | `minLength`/`maxLength` | `minFounded`/`maxFounded` | SettingsPanel, Lobby, room create |
+| `filters.group` | `region` (UN M49, grouped) | `region` (UN M49, grouped) | `region` (UN M49, grouped) | `region` (UN M49, grouped) | SettingsPanel, Lobby, room create |
 
-Per-game UI dictionaries live in `lib/gameUi.js` (`SP_UI`, `MP_UI` — keys verified identical across en/cs/it by tests).
+Per-game UI dictionaries live in `lib/gameUi.js` (`SP_UI`, `MP_UI` — keys verified identical across en/cs/it by tests). Four games: history, mountains, rivers, sportclubs.
 
 ---
 
@@ -205,6 +205,26 @@ erDiagram
         timestamptz updated_at
     }
 
+    SPORT_CLUBS {
+        int id PK
+        varchar short_name
+        int founded_year
+        text description
+        varchar countries
+        varchar sport
+        varchar region
+        text fun_fact
+    }
+
+    SPORT_CLUB_TRANSLATIONS {
+        int club_id PK
+        varchar lang PK
+        varchar short_name
+        text description
+        text fun_fact
+        timestamptz updated_at
+    }
+
     ROOMS {
         int id PK
         varchar code
@@ -229,9 +249,10 @@ erDiagram
     EVENTS ||--o{ EVENT_TRANSLATIONS : "translated to (FK, ON DELETE CASCADE, UNIQUE(event_id,lang))"
     MOUNTAINS ||--o{ MOUNTAIN_TRANSLATIONS : "translated to (FK, ON DELETE CASCADE, UNIQUE(mountain_id,lang))"
     RIVERS ||--o{ RIVER_TRANSLATIONS : "translated to (FK, ON DELETE CASCADE, UNIQUE(river_id,lang))"
+    SPORT_CLUBS ||--o{ SPORT_CLUB_TRANSLATIONS : "translated to (FK, ON DELETE CASCADE, UNIQUE(club_id,lang))"
 ```
 
-`rooms.game` (`'history'` | `'mountains'` | `'rivers'`, default `'history'`) determines which mechanics apply to the room's pairs — comparison direction, scoring gaps and the fun_fact source table. The room's `events` JSONB pool holds rows from the corresponding data table.
+`rooms.game` (`'history'` | `'mountains'` | `'rivers'` | `'sportclubs'`, default `'history'`) determines which mechanics apply to the room's pairs — comparison direction, scoring gaps and the fun_fact source table. The room's `events` JSONB pool holds rows from the corresponding data table.
 
 ---
 
@@ -270,10 +291,10 @@ flowchart TD
     M --> G
 ```
 
-| Scenario | History gap | Mountains gap | Rivers gap | Correct Points | Wrong Points | Timed Out |
-|----------|-------------|----------------|-------------|---------------|--------------|-----------|
-| Simple question | ≥ 100 years | ≥ 500 m | ≥ 100 km | +1 | **0** | **0** |
-| Tough question | < 100 years | < 500 m | < 100 km | +2 | **0** | **0** |
+| Scenario | History gap | Mountains gap | Rivers gap | Sport Clubs gap | Correct Points | Wrong Points | Timed Out |
+|----------|-------------|----------------|-------------|-----------------|---------------|--------------|-----------|
+| Simple question | ≥ 100 years | ≥ 500 m | ≥ 100 km | ≥ 25 years | +1 | **0** | **0** |
+| Tough question | < 100 years | < 500 m | < 100 km | < 25 years | +2 | **0** | **0** |
 
 ---
 
@@ -287,6 +308,7 @@ The game generates pairs of items (events / mountains / rivers) for each round. 
 History:  MIN_GAP_YEARS = 2       (pairs ≤ 2 years apart never shown)
 Mountains: MIN_GAP_METERS = 50    (pairs ≤ 50 m apart never shown)
 Rivers:   MIN_GAP_KM = 10         (pairs ≤ 10 km apart never shown)
+Sport clubs: MIN_GAP_YEARS = 2    (pairs ≤ 2 years apart never shown)
 ```
 
 Any candidate where `gap <= minGap` is **rejected immediately** before weight calculation. This applies to **all three** generation phases (weighted sampling, linear scan fallback, and nuclear fallback).
@@ -378,7 +400,7 @@ pages/
 ├── index.js              # Homescreen: two-step wizard (single/multiplayer → game)
 ├── play/
 │   └── [game]/
-│       ├── index.js      # SP route (SSG: history, mountains) → SinglePlayerGame
+│       ├── index.js      # SP route (SSG: history, mountains, rivers, sportclubs) → SinglePlayerGame
 │       └── multiplayer.js # MP route (SSG) → MultiplayerGame
 ├── api/
 │   ├── room.js           # create / join / update-profile / start / restart / leave / heartbeat (game-aware)
@@ -407,8 +429,8 @@ components/
 ├── ColorPicker.js        # MP: color selection buttons for profile editor
 └── RegionSelect.js       # Shared: continent-grouped region select (history games)
 lib/
-├── games.js              # Game registry: mechanics (direction, minGap, easyGap, gapScale), data tables, helpers
-├── gameUi.js             # Per-game UI dictionaries: SP_UI + MP_UI × history/mountains/rivers × en/cs/it
+├── games.js              # Game registry: mechanics (direction, minGap, easyGap, gapScale, valueLabel), data tables, helpers
+├── gameUi.js             # Per-game UI dictionaries: SP_UI + MP_UI × history/mountains/rivers/sportclubs × en/cs/it
 ├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, game-aware gaps)
 ├── eventTime.js          # getEventYear() / getEventTime() — history dating (date-aware)
 ├── i18n.js               # Shared base UI text + makeT() accessor factory
@@ -422,10 +444,12 @@ scripts/
 ├── seed-mountains.js     # Insert mountain batches (dedupe by short_name)
 ├── validate-mountains.js # Batch validation: fields, dupes, ISO codes, stats
 ├── seed-rivers.js        # Insert river batches (dedupe by short_name)
+├── seed-sport-clubs.js   # Insert sport club batches (dedupe by short_name)
 ├── update-rivers.js      # Update existing river rows (length, countries, region, fun_fact)
 ├── events-data/          # History event batch files
 ├── mountains-data/       # Mountain batch files (starter, himalaya, karakoram, andes, alps, north-america, world)
-└── rivers-data/          # River batch files (global)
+├── rivers-data/          # River batch files (global)
+└── sport-clubs-data/     # Sport club batch files (global)
 tests/
 └── lib/
     ├── games.test.js        # registry, pickWinner, valueGap, pointsForGap (15 tests)
@@ -445,6 +469,7 @@ database/
 ├── 15_create_mountains.sql   # mountains + mountain_translations (RLS: public read on mountains)
 ├── 16_add_rooms_game.sql     # rooms.game column (default 'history')
 ├── 18_create_rivers.sql      # rivers + river_translations (RLS: public read on rivers)
+├── 19_create_sport_clubs.sql # sport_clubs + sport_club_translations (RLS: public read on sport_clubs)
 └── ...                       # other incremental migrations
 .github/workflows/
 └── ci.yml                    # GitHub Actions: lint + test on push/PR
@@ -478,7 +503,7 @@ flowchart LR
 
 ## Testing
 
-The project uses **Vitest** with **jsdom** for unit testing. Tests cover all `lib/` files (172 tests total), including game-specific behaviour for history, mountains and rivers.
+The project uses **Vitest** with **jsdom** for unit testing. Tests cover all `lib/` files (189 tests total), including game-specific behaviour for history, mountains, rivers and sportclubs.
 
 ### Running tests
 

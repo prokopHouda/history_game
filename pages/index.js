@@ -16,6 +16,7 @@ const HOME_UI = {
     historyDesc: 'Which event happened earlier?',
     mountainsDesc: 'Which mountain is higher?',
     riversDesc: 'Which river is longer?',
+    sportclubsDesc: 'Which club is older?',
     players: 'players',
     builtWith: 'Built with real-time rooms and worldwide data',
   },
@@ -32,6 +33,7 @@ const HOME_UI = {
     historyDesc: 'Která událost se stala dříve?',
     mountainsDesc: 'Která hora je vyšší?',
     riversDesc: 'Která řeka je delší?',
+    sportclubsDesc: 'Který klub je starší?',
     players: 'hráčů',
     builtWith: 'Postaveno s místnostmi v reálném čase a daty z celého světa',
   },
@@ -48,6 +50,7 @@ const HOME_UI = {
     historyDesc: 'Quale evento è avvenuto prima?',
     mountainsDesc: 'Quale montagna è più alta?',
     riversDesc: 'Quale fiume è più lungo?',
+    sportclubsDesc: 'Quale club è più antico?',
     players: 'giocatori',
     builtWith: 'Costruito con stanze in tempo reale e dati da tutto il mondo',
   },
@@ -68,6 +71,11 @@ const GAMES_META = [
     key: 'rivers',
     icon: '💧',
     name: { en: 'Rivers', cs: 'Řeky', it: 'Fiumi' },
+  },
+  {
+    key: 'sportclubs',
+    icon: '⚽',
+    name: { en: 'Sport Clubs', cs: 'Sportovní kluby', it: 'Club sportivi' },
   },
 ];
 

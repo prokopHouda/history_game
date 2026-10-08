@@ -53,9 +53,11 @@ export default function SinglePlayerGame({ game: gameKey }) {
   const getLabel = useCallback((e) => {
     return game.key === 'history'
       ? (e.date ? e.date : `${t('year')} ${e.year}`)
-      : game.key === 'mountains'
-        ? `${e.elevation} m`
-        : `${e.length} km`;
+      : game.key === 'sportclubs'
+        ? `${t('year')} ${e.founded_year}`
+        : game.key === 'mountains'
+          ? `${e.elevation} m`
+          : `${e.length} km`;
   }, [t, game]);
 
   // Init: load events from Supabase

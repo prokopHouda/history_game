@@ -2,28 +2,29 @@ import { useState, useMemo } from 'react';
 import { filterEvents, getUniqueGroupsAndCountries, getPoolCountriesString, getUniqueSports } from '../lib/filters.js';
 import { getCountryName, sortCountriesByLocalizedName } from '../lib/countries.js';
 import RegionSelect from './RegionSelect.js';
+import MultiSelect from './MultiSelect.js';
 import CountryFlags from './CountryFlags.js';
 
 export default function Lobby({ allEvents, lang, t, tf, game, MIN_EVENTS, onCreate, onJoin, creating, error }) {
   const { range, group, sport: sportFilter } = game.mechanics.filters;
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
-  const [groupValue, setGroupValue] = useState('');
-  const [country, setCountry] = useState('');
-  const [sportValue, setSportValue] = useState('');
+  const [groupValues, setGroupValues] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [sportValues, setSportValues] = useState([]);
   const [langSelect, setLangSelect] = useState(lang);
   const [rounds, setRounds] = useState(10);
   const [joinCode, setJoinCode] = useState('');
   const [localError, setLocalError] = useState('');
 
-  const { groups, countries } = useMemo(
+  const { groups, countries: allCountryCodes } = useMemo(
     () => getUniqueGroupsAndCountries(allEvents, game.key),
     [allEvents, game.key]
   );
 
   const sortedCountries = useMemo(
-    () => sortCountriesByLocalizedName(countries, lang),
-    [countries, lang]
+    () => sortCountriesByLocalizedName(allCountryCodes, lang),
+    [allCountryCodes, lang]
   );
 
   const sports = useMemo(
@@ -34,10 +35,10 @@ export default function Lobby({ allEvents, lang, t, tf, game, MIN_EVENTS, onCrea
   const filters = useMemo(() => ({
     [range.minKey]: parseInt(minValue, 10) || null,
     [range.maxKey]: parseInt(maxValue, 10) || null,
-    [group.key]: groupValue,
-    ...(sportFilter ? { [sportFilter.key]: sportValue } : {}),
-    country,
-  }), [minValue, maxValue, groupValue, sportValue, country, range.minKey, range.maxKey, group.key, sportFilter]);
+    [group.key]: groupValues,
+    ...(sportFilter ? { [sportFilter.key]: sportValues } : {}),
+    country: countries,
+  }), [minValue, maxValue, groupValues, sportValues, countries, range.minKey, range.maxKey, group.key, sportFilter]);
 
   const { count, valid } = useMemo(() => {
     const min = filters[range.minKey];
@@ -109,35 +110,51 @@ export default function Lobby({ allEvents, lang, t, tf, game, MIN_EVENTS, onCrea
         {group.grouped ? (
           <RegionSelect
             id="mp-groupFilter"
-            value={groupValue}
-            onChange={(v) => { setGroupValue(v); setLocalError(''); }}
+            multiple
+            values={groupValues}
+            onChange={(v) => { setGroupValues(v); setLocalError(''); }}
             regions={groups}
             t={t}
             tf={tf}
           />
         ) : (
-          <select id="mp-groupFilter" value={groupValue} onChange={(e) => { setGroupValue(e.target.value); setLocalError(''); }}>
-            <option value="">{t('allRegions')}</option>
-            {groups.map((g) => <option key={g} value={g}>{g}</option>)}
-          </select>
+          <MultiSelect
+            id="mp-groupFilter"
+            values={groupValues}
+            onChange={(v) => { setGroupValues(v); setLocalError(''); }}
+            options={groups.map((g) => ({ value: g, label: g }))}
+            allLabel={t('allRegions')}
+            addLabel={t('addMore')}
+            t={t}
+          />
         )}
       </div>
 
       <div className="field">
         <label htmlFor="mp-countryFilter">{t('country')}</label>
-        <select id="mp-countryFilter" value={country} onChange={(e) => { setCountry(e.target.value); setLocalError(''); }}>
-          <option value="">{t('allCountries')}</option>
-          {sortedCountries.map((c) => <option key={c} value={c}>{getCountryName(c, lang)}</option>)}
-        </select>
+        <MultiSelect
+          id="mp-countryFilter"
+          values={countries}
+          onChange={(v) => { setCountries(v); setLocalError(''); }}
+          options={sortedCountries.map((c) => ({ value: c, label: getCountryName(c, lang) }))}
+          allLabel={t('allCountries')}
+          addLabel={t('addMore')}
+          t={t}
+        />
       </div>
 
       {sportFilter && (
         <div className="field">
           <label htmlFor="mp-sportFilter">{t('sportLabel')}</label>
-          <select id="mp-sportFilter" value={sportValue} onChange={(e) => { setSportValue(e.target.value); setLocalError(''); }}>
-            <option value="">{t('allSports')}</option>
-            {sports.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <MultiSelect
+            id="mp-sportFilter"
+            values={sportValues}
+            onChange={(v) => { setSportValues(v); setLocalError(''); }}
+            options={sports.map((s) => ({ value: s, label: s }))}
+            allLabel={t('allSports')}
+            addLabel={t('addMore')}
+            t={t}
+          />
         </div>
       )}
 

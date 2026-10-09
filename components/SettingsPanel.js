@@ -2,26 +2,27 @@ import { useState, useMemo } from 'react';
 import { filterEvents, getUniqueGroupsAndCountries, getPoolCountriesString, getUniqueSports } from '../lib/filters.js';
 import { getCountryName, sortCountriesByLocalizedName } from '../lib/countries.js';
 import RegionSelect from './RegionSelect.js';
+import MultiSelect from './MultiSelect.js';
 import CountryFlags from './CountryFlags.js';
 
 export default function SettingsPanel({ allEvents, lang, t, tf, game, MIN_EVENTS, onStart }) {
   const { range, group, sport: sportFilter } = game.mechanics.filters;
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
-  const [groupValue, setGroupValue] = useState('');
-  const [country, setCountry] = useState('');
-  const [sportValue, setSportValue] = useState('');
+  const [groupValues, setGroupValues] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [sportValues, setSportValues] = useState([]);
   const [langSelect, setLangSelect] = useState(lang);
   const [error, setError] = useState('');
 
-  const { groups, countries } = useMemo(
+  const { groups, countries: allCountryCodes } = useMemo(
     () => getUniqueGroupsAndCountries(allEvents, game.key),
     [allEvents, game.key]
   );
 
   const sortedCountries = useMemo(
-    () => sortCountriesByLocalizedName(countries, lang),
-    [countries, lang]
+    () => sortCountriesByLocalizedName(allCountryCodes, lang),
+    [allCountryCodes, lang]
   );
 
   const sports = useMemo(
@@ -32,10 +33,10 @@ export default function SettingsPanel({ allEvents, lang, t, tf, game, MIN_EVENTS
   const filters = useMemo(() => ({
     [range.minKey]: parseInt(minValue, 10) || null,
     [range.maxKey]: parseInt(maxValue, 10) || null,
-    [group.key]: groupValue,
-    ...(sportFilter ? { [sportFilter.key]: sportValue } : {}),
-    country,
-  }), [minValue, maxValue, groupValue, sportValue, country, range.minKey, range.maxKey, group.key, sportFilter]);
+    [group.key]: groupValues,
+    ...(sportFilter ? { [sportFilter.key]: sportValues } : {}),
+    country: countries,
+  }), [minValue, maxValue, groupValues, sportValues, countries, range.minKey, range.maxKey, group.key, sportFilter]);
 
   const { count, valid } = useMemo(() => {
     const min = filters[range.minKey];
@@ -54,9 +55,9 @@ export default function SettingsPanel({ allEvents, lang, t, tf, game, MIN_EVENTS
 
   function updateMin(v) { setMinValue(v); setError(''); }
   function updateMax(v) { setMaxValue(v); setError(''); }
-  function updateGroup(v) { setGroupValue(v); setError(''); }
-  function updateCountry(v) { setCountry(v); setError(''); }
-  function updateSport(v) { setSportValue(v); setError(''); }
+  function updateGroups(v) { setGroupValues(v); setError(''); }
+  function updateCountries(v) { setCountries(v); setError(''); }
+  function updateSports(v) { setSportValues(v); setError(''); }
 
   function handleStart() {
     if (!valid) {
@@ -100,41 +101,51 @@ export default function SettingsPanel({ allEvents, lang, t, tf, game, MIN_EVENTS
         {group.grouped ? (
           <RegionSelect
             id="groupFilter"
-            value={groupValue}
-            onChange={updateGroup}
+            multiple
+            values={groupValues}
+            onChange={updateGroups}
             regions={groups}
             t={t}
             tf={tf}
           />
         ) : (
-          <select id="groupFilter" value={groupValue} onChange={(e) => updateGroup(e.target.value)}>
-            <option value="">{t('allRegions')}</option>
-            {groups.map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
+          <MultiSelect
+            id="groupFilter"
+            values={groupValues}
+            onChange={updateGroups}
+            options={groups.map((g) => ({ value: g, label: g }))}
+            allLabel={t('allRegions')}
+            addLabel={t('addMore')}
+            t={t}
+          />
         )}
       </div>
 
       <div className="field">
         <label htmlFor="countryFilter">{t('country')}</label>
-        <select id="countryFilter" value={country} onChange={(e) => updateCountry(e.target.value)}>
-          <option value="">{t('allCountries')}</option>
-          {sortedCountries.map((c) => (
-            <option key={c} value={c}>{getCountryName(c, lang)}</option>
-          ))}
-        </select>
+        <MultiSelect
+          id="countryFilter"
+          values={countries}
+          onChange={updateCountries}
+          options={sortedCountries.map((c) => ({ value: c, label: getCountryName(c, lang) }))}
+          allLabel={t('allCountries')}
+          addLabel={t('addMore')}
+          t={t}
+        />
       </div>
 
       {sportFilter && (
         <div className="field">
           <label htmlFor="sportFilter">{t('sportLabel')}</label>
-          <select id="sportFilter" value={sportValue} onChange={(e) => updateSport(e.target.value)}>
-            <option value="">{t('allSports')}</option>
-            {sports.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+          <MultiSelect
+            id="sportFilter"
+            values={sportValues}
+            onChange={updateSports}
+            options={sports.map((s) => ({ value: s, label: s }))}
+            allLabel={t('allSports')}
+            addLabel={t('addMore')}
+            t={t}
+          />
         </div>
       )}
 

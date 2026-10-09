@@ -410,13 +410,13 @@ pages/
 components/
 ├── SinglePlayerGame.js   # SP engine (game prop; loads pool, streaks, milestones, win at 50)
 ├── MultiplayerGame.js    # MP engine (game prop; realtime subscriptions, heartbeats, turn timers)
-├── SettingsPanel.js      # SP: filter form (min/max value + group + country + lang + pool counter)
+├── SettingsPanel.js      # SP: filter form (min/max value + multi-select group/country/sport + lang + pool counter)
 ├── GameCard.js           # SP: card (flags, name, desc, meta, click/keyboard, states)
 ├── CountryFlags.js       # Shared: flag row from `countries` ISO codes via flagcdn.com
 ├── StreakBar.js          # SP: progress bar + milestone text
 ├── Hud.js                # SP: score + streak badges
 ├── LangNav.js            # Shared: EN/CS/IT language buttons
-├── Lobby.js              # MP: create/join room form (filters + rounds + room code)
+├── Lobby.js              # MP: create/join room form (multi-select filters + rounds + room code)
 ├── WaitingRoom.js        # MP: player list, profile editor, host start button
 ├── GameScreen.js         # MP: cards + leaderboard + round info + status
 ├── MpGameCard.js          # MP: card with flags + check mark + loading spinner
@@ -427,14 +427,15 @@ components/
 ├── RoundLeaderboard.js   # MP: per-round results (correct/wrong/timeout + points)
 ├── PlayerList.js         # MP: waiting room player list with color dots + host badges
 ├── ColorPicker.js        # MP: color selection buttons for profile editor
-└── RegionSelect.js       # Shared: continent-grouped region select (history games)
+├── MultiSelect.js        # Shared: reusable dropdown + removable pills multi-select widget
+└── RegionSelect.js       # Shared: continent-grouped region select (single + multi-select mode)
 lib/
 ├── games.js              # Game registry: mechanics (direction, minGap, easyGap, gapScale, valueLabel), data tables, helpers
 ├── gameUi.js             # Per-game UI dictionaries: SP_UI + MP_UI × history/mountains/rivers/sportclubs × en/cs/it
 ├── pickPair.js           # Shared pair generation (proximity-weighted + dedup, game-aware gaps)
 ├── eventTime.js          # getEventYear() / getEventTime() — history dating (date-aware)
 ├── i18n.js               # Shared base UI text + makeT() accessor factory
-├── filters.js            # filterEvents() + getUniqueGroupsAndCountries() + getPoolCountriesString() (game-aware)
+├── filters.js            # filterEvents() + getUniqueGroupsAndCountries() + getPoolCountriesString() (game-aware, multi-select arrays)
 ├── translate.js          # ensureTranslated() / getText() — fetch + cache translations (game param)
 ├── onCardKey.js          # Shared keyboard handler factory (Enter/Space → click)
 ├── milestones.js         # MILESTONES, getMilestone(), getNextMilestone() (per-game streak badges)
@@ -503,7 +504,7 @@ flowchart LR
 
 ## Testing
 
-The project uses **Vitest** with **jsdom** for unit testing. Tests cover all `lib/` files (189 tests total), including game-specific behaviour for history, mountains, rivers and sportclubs.
+The project uses **Vitest** with **jsdom** for unit testing. Tests cover all `lib/` files (198 tests total), including game-specific behaviour for history, mountains, rivers and sportclubs.
 
 ### Running tests
 

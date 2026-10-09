@@ -26,8 +26,8 @@ Create a new multiplayer room. Host is automatically added to the `players` arra
   "filters": {
     "startYear": 1500,
     "endYear": 2000,
-    "region": "Europe",
-    "country": "CZ"
+    "region": ["Europe", "Asia"],
+    "country": ["CZ", "DE", "IT"]
   },
   "nickname": "Alice",
   "color": "#ef4444"
@@ -44,8 +44,8 @@ Create a new multiplayer room. Host is automatically added to the `players` arra
   "filters": {
     "minElevation": 2000,
     "maxElevation": 8849,
-    "region": "Europe",
-    "country": "CH"
+    "region": ["Europe"],
+    "country": ["CH", "IT"]
   },
   "nickname": "Alice",
   "color": "#ef4444"
@@ -62,15 +62,17 @@ Create a new multiplayer room. Host is automatically added to the `players` arra
   "filters": {
     "minLength": 1000,
     "maxLength": 6650,
-    "region": "Europe",
-    "country": "DE"
+    "region": ["Europe"],
+    "country": ["DE"]
   },
   "nickname": "Alice",
   "color": "#ef4444"
 }
 ```
 
-Filter keys are game-specific (see `lib/games.js` → `mechanics.filters`); the API ignores keys that don't belong to the room's game. All games use the same UN M49 `region` taxonomy; the country filter always takes an ISO-2 code (the UI displays localized country names).
+Filter keys are game-specific (see `lib/games.js` → `mechanics.filters`); the API ignores keys that don't belong to the room's game. All games use the same UN M49 `region` taxonomy; the country filter always takes ISO-2 codes (the UI displays localized country names).
+
+The `region`, `country`, and `sport` (sportclubs only) filters accept **arrays of strings** — an event matches if it belongs to **any** of the selected values (OR logic). An empty array means "no filter" (all values). Single string values are also accepted for backward compatibility. The range filters (`startYear`/`endYear`, `minElevation`/`maxElevation`, `minLength`/`maxLength`, `minFounded`/`maxFounded`) remain single min/max pairs.
 
 **Response:**
 ```json

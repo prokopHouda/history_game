@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
-import { filterEvents, getUniqueGroupsAndCountries, getPoolCountriesString } from '../lib/filters.js';
+import { filterEvents, getUniqueGroupsAndCountries, getPoolCountriesString, getUniqueSports } from '../lib/filters.js';
 import { getCountryName, sortCountriesByLocalizedName } from '../lib/countries.js';
 import RegionSelect from './RegionSelect.js';
 import CountryFlags from './CountryFlags.js';
 
 export default function Lobby({ allEvents, lang, t, tf, game, MIN_EVENTS, onCreate, onJoin, creating, error }) {
-  const { range, group } = game.mechanics.filters;
+  const { range, group, sport: sportFilter } = game.mechanics.filters;
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
   const [groupValue, setGroupValue] = useState('');
   const [country, setCountry] = useState('');
+  const [sportValue, setSportValue] = useState('');
   const [langSelect, setLangSelect] = useState(lang);
   const [rounds, setRounds] = useState(10);
   const [joinCode, setJoinCode] = useState('');
@@ -25,12 +26,18 @@ export default function Lobby({ allEvents, lang, t, tf, game, MIN_EVENTS, onCrea
     [countries, lang]
   );
 
+  const sports = useMemo(
+    () => sportFilter ? getUniqueSports(allEvents, game.key) : [],
+    [allEvents, game.key, sportFilter]
+  );
+
   const filters = useMemo(() => ({
     [range.minKey]: parseInt(minValue, 10) || null,
     [range.maxKey]: parseInt(maxValue, 10) || null,
     [group.key]: groupValue,
+    ...(sportFilter ? { [sportFilter.key]: sportValue } : {}),
     country,
-  }), [minValue, maxValue, groupValue, country, range.minKey, range.maxKey, group.key]);
+  }), [minValue, maxValue, groupValue, sportValue, country, range.minKey, range.maxKey, group.key, sportFilter]);
 
   const { count, valid } = useMemo(() => {
     const min = filters[range.minKey];
@@ -123,6 +130,16 @@ export default function Lobby({ allEvents, lang, t, tf, game, MIN_EVENTS, onCrea
           {sortedCountries.map((c) => <option key={c} value={c}>{getCountryName(c, lang)}</option>)}
         </select>
       </div>
+
+      {sportFilter && (
+        <div className="field">
+          <label htmlFor="mp-sportFilter">{t('sportLabel')}</label>
+          <select id="mp-sportFilter" value={sportValue} onChange={(e) => { setSportValue(e.target.value); setLocalError(''); }}>
+            <option value="">{t('allSports')}</option>
+            {sports.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      )}
 
       <div className="field">
         <label htmlFor="roundsInput">{t('rounds')}</label>

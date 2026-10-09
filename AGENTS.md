@@ -36,7 +36,7 @@
 - **`mountain_translations` table**: `mountain_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
 - **`rivers` table**: `id, short_name, length (int, km), description, countries, region, fun_fact` — mirrors `events`/`mountains` (migration `database/18_create_rivers.sql`; RLS: public read on `rivers`, translations service-only). `region` uses the same UN M49 sub-regions.
 - **`river_translations` table**: `river_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
-- **`sport_clubs` table**: `id, short_name, founded (int, year), description, countries, sport, region, fun_fact` — mirrors `events`/`mountains`/`rivers` (migration `database/19_create_sport_clubs.sql`; RLS: public read on `sport_clubs`, translations service-only). `region` uses the same UN M49 sub-regions; `sport` is kept as data (e.g. "football", "basketball") but not a filter.
+- **`sport_clubs` table**: `id, short_name, founded_year (int), description, countries, sport, region, fun_fact` — mirrors `events`/`mountains`/`rivers` (migration `database/19_create_sport_clubs.sql`; RLS: public read on `sport_clubs`, translations service-only). `region` uses the same UN M49 sub-regions; `sport` is kept as data (e.g. "football", "basketball") but not a filter.
 - **`sport_club_translations` table**: `club_id, lang, short_name, description, fun_fact, updated_at` — mirrors `event_translations`
 - **`rooms` table** (multiplayer): `id, code, game, host, state, events (pool JSONB), current_pair, scores, streaks, current_round, answered, winner, shown_pairs, heartbeats, created_at/updated_at`
   - `game`: `'history'` (default), `'mountains'`, `'rivers'` or `'sportclubs'` — set at create, read by turn/translate logic

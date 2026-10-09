@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterEvents, getUniqueRegionsAndCountries, getUniqueGroupsAndCountries } from '../../lib/filters.js';
+import { filterEvents, getUniqueRegionsAndCountries, getUniqueGroupsAndCountries, getUniqueSports } from '../../lib/filters.js';
 
 const sampleEvents = [
   { id: 1, year: 100, region: 'Eastern Europe', countries: 'CZ, SK' },
@@ -232,5 +232,66 @@ describe('getUniqueGroupsAndCountries — mountains game', () => {
   it('extracts unique sorted countries', () => {
     const { countries } = getUniqueGroupsAndCountries(peaks, 'mountains');
     expect(countries).toEqual(['CH', 'IT', 'NP']);
+  });
+});
+
+describe('filterEvents — sportclubs game', () => {
+  const clubs = [
+    { id: 1, founded_year: 1857, sport: 'football', region: 'Northern Europe', countries: 'GB' },
+    { id: 2, founded_year: 1946, sport: 'basketball', region: 'Northern America', countries: 'US' },
+    { id: 3, founded_year: 1909, sport: 'ice hockey', region: 'Northern America', countries: 'CA' },
+    { id: 4, founded_year: 1869, sport: 'baseball', region: 'Northern America', countries: 'US' },
+    { id: 5, founded_year: 1890, sport: 'football', region: 'Southern Europe', countries: 'ES' },
+  ];
+
+  it('returns all when no filters', () => {
+    expect(filterEvents(clubs, null, 'sportclubs')).toHaveLength(5);
+    expect(filterEvents(clubs, {}, 'sportclubs')).toHaveLength(5);
+  });
+
+  it('filters by founding year range', () => {
+    expect(filterEvents(clubs, { minFounded: 1900 }, 'sportclubs')).toHaveLength(2);
+    expect(filterEvents(clubs, { maxFounded: 1900 }, 'sportclubs')).toHaveLength(3);
+    expect(filterEvents(clubs, { minFounded: 1860, maxFounded: 1910 }, 'sportclubs')).toHaveLength(3);
+  });
+
+  it('filters by sport', () => {
+    expect(filterEvents(clubs, { sport: 'football' }, 'sportclubs')).toHaveLength(2);
+    expect(filterEvents(clubs, { sport: 'basketball' }, 'sportclubs')).toHaveLength(1);
+    expect(filterEvents(clubs, { sport: 'ice hockey' }, 'sportclubs')).toHaveLength(1);
+  });
+
+  it('filters by region', () => {
+    expect(filterEvents(clubs, { region: 'Northern America' }, 'sportclubs')).toHaveLength(3);
+  });
+
+  it('filters by country', () => {
+    expect(filterEvents(clubs, { country: 'US' }, 'sportclubs')).toHaveLength(2);
+  });
+
+  it('combines sport + region + country', () => {
+    expect(filterEvents(clubs, { sport: 'baseball', region: 'Northern America', country: 'US' }, 'sportclubs')).toHaveLength(1);
+  });
+
+  it('ignores other games filter keys for sportclubs', () => {
+    expect(filterEvents(clubs, { startYear: 9999, endYear: 0, minElevation: 99999 }, 'sportclubs')).toHaveLength(5);
+  });
+});
+
+describe('getUniqueSports', () => {
+  const clubs = [
+    { id: 1, sport: 'football', region: 'Northern Europe' },
+    { id: 2, sport: 'basketball', region: 'Northern America' },
+    { id: 3, sport: 'ice hockey', region: 'Northern America' },
+  ];
+
+  it('extracts unique sorted sport types for sportclubs', () => {
+    expect(getUniqueSports(clubs, 'sportclubs')).toEqual(['basketball', 'football', 'ice hockey']);
+  });
+
+  it('returns empty array for games without sport filter', () => {
+    expect(getUniqueSports(clubs, 'history')).toEqual([]);
+    expect(getUniqueSports(clubs, 'mountains')).toEqual([]);
+    expect(getUniqueSports(clubs, 'rivers')).toEqual([]);
   });
 });
